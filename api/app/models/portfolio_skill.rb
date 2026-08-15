@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class PortfolioSkill < ApplicationRecord
+  include SessionTenantScoped
+
   CONFIDENCE_LEVELS = %w[high medium low].freeze
 
   # A portfolio row now carries *why* it has no rating, not just the absence of
@@ -13,6 +15,8 @@ class PortfolioSkill < ApplicationRecord
 
   belongs_to :portfolio
   has_one :assessor_override, dependent: :destroy
+
+  scoped_to_tenant_through portfolio: :session
 
   before_validation :normalise_skill_label
 
