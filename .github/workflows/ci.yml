@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  api:
+    name: API — rspec + rubocop
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          # No password: this container only ever exists for the lifetime of
+          # this job, on an isolated Actions runner with no external network
+          # exposure. A literal password string here has no security value
+          # and only trips secret scanners (GitGuardian) on every push.
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 10s
+          --health-timeout 5s --health-retries 5
+      redis:
+        image: redis:alpine
+        ports: ["6379:6379"]
+
+    env:
+      RAILS_ENV: test
+      # Never a real key: GEMINI_STUB routes every AI call to Gemini::StubClient,
+      # so CI exercises the failure paths without a vendor dependency.
+      GEMINI_STUB: "true"
+      GEMINI_API_KEY: stub
+      SECRET_KEY_BASE: ci-secret-key-base-not-a-real-secret
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_NAME: rakamin_test
+      DB_USERNAME: postgres
+      DB_PASSWORD: ""
+      REDIS_URL: redis://localhost:6379/1
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          working-directory: api
+          bundler-cache: true
+      - name: Prepare database
+        working-directory: api
+        run: bundle exec rails db:create db:schema:load
+      - name: Verify the migration rolls back cleanly
+        working-directory: api
+        run: bundle exec rails db:migrate && bundle exec rails db:rollback STEP=2 && bundle exec rails db:migrate
+      - name: RSpec
+        working-directory: api
+        run: bundle exec rspec
+      - name: RuboCop
+        working-directory: api
+        run: bundle exec rubocop
+
+  web:
+    name: Web — tsc + vitest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+        working-directory: web
+      - name: Typecheck
+        working-directory: web
+        run: npm run typecheck
+      - name: Vitest
+        working-directory: web
+        run: npm run test:run

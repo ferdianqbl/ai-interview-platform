@@ -181,8 +181,14 @@ module Api
           skill_id:          skill.skill_id,
           skill_label:       skill.skill_label,
           is_discovered:     skill.is_discovered,
+          # ai_level is null whenever assessment_state is not 'assessed'. The
+          # client must render the state, not default the level to a number.
+          assessment_state:  skill.assessment_state,
           ai_level:          skill.ai_level,
           ai_confidence:     skill.ai_confidence,
+          effective_level:   skill.effective_level,
+          is_override:       skill.overridden?,
+          superseded_at:     skill.superseded_at,
           evidence:          skill.evidence_quotes,
           competency_summary: skill.competency_summary
         }
