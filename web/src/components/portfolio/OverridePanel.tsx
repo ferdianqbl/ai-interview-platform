@@ -25,21 +25,26 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
   const [notes, setNotes] = useState(existingOverride?.assessor_notes ?? "");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
   const hasOverride = !!existingOverride;
 
   const handleSave = async () => {
     setSaving(true);
     setSaveError(false);
+    setSaveMessage(null);
     try {
-      const res = await portfoliosApi.getOverride(skill.id, {
+      const res = await portfoliosApi.saveOverride(skill.id, {
         override_level: overrideLevel,
         assessor_notes: notes,
       });
       onSaved(res.data.override);
       setOpen(false);
-    } catch {
+    } catch (e) {
+      // Was a bare `catch {}`, so an assessor saw a generic failure with no
+      // indication of what went wrong or whether a retry would help.
       setSaveError(true);
+      setSaveMessage(e instanceof Error ? e.message : "Could not save the override.");
     } finally {
       setSaving(false);
     }
@@ -99,7 +104,9 @@ export default function OverridePanel({ skill, existingOverride, onSaved }: Over
       </div>
 
       {saveError && (
-        <p className="text-xs text-destructive">Failed to save override. Please try again.</p>
+        <p role="alert" className="text-xs text-destructive">
+          {saveMessage ?? "Failed to save override. Please try again."}
+        </p>
       )}
 
       <div className="flex gap-2">
