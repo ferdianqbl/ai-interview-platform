@@ -2,7 +2,13 @@
 
 require 'rails_helper'
 
-RSpec.describe Portfolios::Generator, :with_tenant do
+RSpec.describe Portfolios::Generator do
+  # Explicit, not metadata-triggered: this must register before the let!s
+  # below run, and relying on :with_tenant + apply_to_host_groups timing was
+  # not reliably doing that (Current.tenant_id was unset when the coverage_map
+  # factories fired). include_context here is unambiguous about ordering.
+  include_context 'with tenant'
+
   let(:assessment) { create(:assessment) }
   let(:session)    { create(:session, :ended, assessment: assessment) }
 
@@ -152,10 +158,10 @@ RSpec.describe Portfolios::Generator, :with_tenant do
 
   describe 'write safety' do
     it 'rolls back completely when a write fails partway through', :truncation do
-      allow_any_instance_of(PortfolioSkill).to receive(:save!).and_wrap_original do |original, *args|
+      allow_any_instance_of(PortfolioSkill).to receive(:save!).and_wrap_original do |original, *args, **kwargs|
         raise ActiveRecord::StatementInvalid, 'simulated write failure' if original.receiver.skill_label == 'Incident Response'
 
-        original.call(*args)
+        original.call(*args, **kwargs)
       end
 
       expect { generate }.to raise_error(ActiveRecord::StatementInvalid)
