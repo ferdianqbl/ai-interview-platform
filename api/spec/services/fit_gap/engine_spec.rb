@@ -2,7 +2,9 @@
 
 require 'rails_helper'
 
-RSpec.describe FitGap::Engine, :with_tenant do
+RSpec.describe FitGap::Engine do
+  include_context 'with tenant'
+
   let(:portfolio) { create(:portfolio) }
   let(:vacancy)   { create(:vacancy) }
 
