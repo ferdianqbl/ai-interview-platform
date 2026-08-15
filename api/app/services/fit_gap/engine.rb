@@ -7,7 +7,7 @@ module FitGap
     def initialize(portfolio:, vacancy:, gemini_client: nil)
       @portfolio = portfolio
       @vacancy   = vacancy
-      @gemini_client = gemini_client || Gemini::HttpClient.new(
+      @gemini_client = gemini_client || Gemini.client_for(
         model:   ENV.fetch('GEMINI_FLASH_MODEL', 'gemini-2.0-flash-001'),
         timeout: 30
       )
