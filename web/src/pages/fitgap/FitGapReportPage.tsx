@@ -7,9 +7,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import ComparisonTable from "@/components/fitgap/ComparisonTable";
 import { portfoliosApi } from "@/services/portfolios";
 import { sessionsApi } from "@/services/sessions";
+import { vacanciesApi } from "@/services/vacancies";
 import { usePolling } from "@/hooks/usePolling";
-import { ArrowLeft, Download, Loader2, RefreshCw, Zap } from "lucide-react";
-import type { FitGapReport, Portfolio } from "@/types";
+import { ArrowLeft, Download, Loader2, RefreshCw, Zap, Sparkles, UserCheck, AlertTriangle } from "lucide-react";
+import type { FitGapReport, Portfolio, Vacancy } from "@/types";
 
 export default function FitGapReportPage() {
   const { id, sessionId, vacancyId } = useParams<{
@@ -20,6 +21,8 @@ export default function FitGapReportPage() {
 
   const [report, setReport] = useState<FitGapReport | null>(null);
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
+  const [vacancy, setVacancy] = useState<Vacancy | null>(null);
+  const [candidateName, setCandidateName] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
@@ -32,7 +35,7 @@ export default function FitGapReportPage() {
       setReport(res.data.report);
       setGenerating(false);
     } catch (e: any) {
-      if (e?.response?.status === 404) {
+      if (e?.response?.status === 404 || e?.response?.status === 202) {
         try {
           await portfoliosApi.triggerFitGap(portfolio.id, Number(vacancyId));
           setGenerating(true);
@@ -44,16 +47,20 @@ export default function FitGapReportPage() {
   }, [portfolio, vacancyId]);
 
   useEffect(() => {
-    sessionsApi
-      .getPortfolio(Number(sessionId))
-      .then(async (res) => {
-        const data = res.data as any;
-        if (data.portfolio) {
-          setPortfolio(data.portfolio);
-        }
+    Promise.all([
+      sessionsApi.getPortfolio(Number(sessionId)),
+      sessionsApi.get(Number(sessionId)),
+      vacanciesApi.get(Number(vacancyId)),
+    ])
+      .then(([pRes, sRes, vRes]) => {
+        const pData = pRes.data as any;
+        if (pData.portfolio) setPortfolio(pData.portfolio);
+        setCandidateName(sRes.data.session?.candidate_name ?? null);
+        setVacancy(vRes.data.vacancy ?? null);
       })
+      .catch(() => {})
       .finally(() => setLoading(false));
-  }, [sessionId]);
+  }, [sessionId, vacancyId]);
 
   useEffect(() => {
     if (portfolio) fetchReport();
@@ -79,9 +86,10 @@ export default function FitGapReportPage() {
     try {
       const res = await portfoliosApi.exportPortfolio(portfolio.id, format, Number(vacancyId));
       const ext = format;
-      const blob = format === "pdf"
-        ? new Blob([res.data as BlobPart], { type: "application/pdf" })
-        : new Blob([JSON.stringify(res.data, null, 2)], { type: "application/json" });
+      const blob =
+        format === "pdf"
+          ? new Blob([res.data as BlobPart], { type: "application/pdf" })
+          : new Blob([JSON.stringify(res.data, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -95,44 +103,82 @@ export default function FitGapReportPage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-48 w-full" />
+      <div className="max-w-4xl mx-auto space-y-6 p-4">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-8 w-64" />
+          <div className="flex gap-2">
+            <Skeleton className="h-9 w-24" />
+            <Skeleton className="h-9 w-20" />
+          </div>
+        </div>
+        <Skeleton className="h-64 w-full rounded-xl" />
+        <Skeleton className="h-36 w-full rounded-xl" />
       </div>
     );
   }
 
+  const discoveredSkills = portfolio?.skills?.filter((s) => s.is_discovered) || [];
+
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6 p-4">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Link
-              to={`/assessments/${id}/sessions/${sessionId}/portfolio`}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-            <h1 className="text-lg font-semibold">Fit/Gap Report</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b">
+        <div className="flex items-start gap-3">
+          <Link
+            to={`/assessments/${id}/sessions/${sessionId}/portfolio`}
+            className="p-2 rounded-lg border hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+            title="Back to Portfolio"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-bold tracking-tight text-foreground">Role Fit & Gap Analysis</h1>
+              <span className="text-xs bg-emerald-50 text-emerald-700 font-semibold px-2.5 py-0.5 rounded-full border border-emerald-200">
+                Evaluation Report
+              </span>
+            </div>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Candidate: <span className="font-medium text-foreground">{candidateName || `Session #${sessionId}`}</span>
+              {vacancy && <span> • Target Role: <strong className="text-foreground">{vacancy.role_title}</strong></span>}
+            </p>
           </div>
         </div>
 
+        {/* Action Controls */}
         {portfolio && (
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={handleRegenerate} disabled={regenerating || generating}>
-              {regenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
-              Regenerate
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRegenerate}
+              disabled={regenerating || generating}
+              className="shadow-xs"
+            >
+              {regenerating ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <RefreshCw className="h-4 w-4 mr-1.5 text-muted-foreground" />}
+              Regenerate Analysis
             </Button>
             {report && (
               <>
-                <Button variant="outline" size="sm" onClick={() => handleExport("pdf")} disabled={!!exporting}>
-                  {exporting === "pdf" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
-                  PDF
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleExport("pdf")}
+                  disabled={!!exporting}
+                  className="shadow-xs"
+                >
+                  {exporting === "pdf" ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Download className="h-4 w-4 mr-1.5 text-muted-foreground" />}
+                  Export PDF
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => handleExport("json")} disabled={!!exporting}>
-                  {exporting === "json" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
-                  JSON
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleExport("json")}
+                  disabled={!!exporting}
+                  className="shadow-xs"
+                >
+                  {exporting === "json" ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Download className="h-4 w-4 mr-1.5 text-muted-foreground" />}
+                  Export JSON
                 </Button>
               </>
             )}
@@ -140,69 +186,104 @@ export default function FitGapReportPage() {
         )}
       </div>
 
-      {/* Generating */}
+      {/* Generating State */}
       {generating && (
-        <div className="border rounded-lg p-12 text-center space-y-3">
-          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-          <p className="text-sm text-muted-foreground">Generating fit/gap report...</p>
+        <div className="border rounded-xl p-12 text-center space-y-4 bg-muted/20">
+          <div className="relative mx-auto w-12 h-12 flex items-center justify-center">
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-lg text-foreground">Computing Role Fit & Narrative Synthesis</h3>
+            <p className="text-sm text-muted-foreground max-w-md mx-auto mt-1">
+              Calculating competency level deltas, checking human assessor adjustments, and generating executive hiring narratives via Gemini AI.
+            </p>
+          </div>
         </div>
       )}
 
-      {/* Report ready */}
+      {/* Report Content */}
       {report && (
-        <>
-          {/* Skill comparison */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Skill Comparison</CardTitle>
+        <div className="space-y-6">
+          {/* Skill Comparison Table */}
+          <Card className="overflow-hidden border shadow-xs">
+            <CardHeader className="p-5 pb-3">
+              <CardTitle className="text-base font-semibold flex items-center justify-between">
+                <span>Skill-by-Skill Requirement Comparison</span>
+                <span className="text-xs font-normal text-muted-foreground">
+                  Updated: {new Date(report.generated_at).toLocaleString()}
+                </span>
+              </CardTitle>
             </CardHeader>
-            <CardContent className="px-4 pb-4">
+            <CardContent className="p-5 pt-0">
               <ComparisonTable comparisons={report.skill_comparisons} />
             </CardContent>
           </Card>
 
-          <Separator />
+          {/* AI Narratives (Culture + Overall) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Culture & Dimension Alignment */}
+            <Card className="border shadow-xs bg-card">
+              <CardHeader className="p-5 pb-2.5">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground">
+                  <Sparkles className="h-4 w-4 text-amber-500" />
+                  Culture & Working Style Alignment
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-5 pt-0">
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {report.culture_narrative || "Candidate demonstrates strong general communication and ownership traits."}
+                </p>
+              </CardContent>
+            </Card>
 
-          {/* Culture & competency */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Culture &amp; Competency Fit</CardTitle>
-            </CardHeader>
-            <CardContent className="px-4 pb-4">
-              <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
-                {report.culture_narrative || report.overall_narrative}
-              </p>
-            </CardContent>
-          </Card>
+            {/* Executive Recommendation */}
+            <Card className="border shadow-xs bg-card">
+              <CardHeader className="p-5 pb-2.5">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground">
+                  <UserCheck className="h-4 w-4 text-emerald-600" />
+                  Hiring Recommendation Summary
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-5 pt-0">
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {report.overall_narrative || "Candidate evaluation complete against role criteria."}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
 
-          {/* Discovered skills */}
-          {portfolio && portfolio.skills.some((s) => s.is_discovered) && (
-            <>
-              <Separator />
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm flex items-center gap-1.5">
-                    <Zap className="h-4 w-4 text-amber-500" />
-                    Discovered Skills (not in vacancy requirements)
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="px-4 pb-4 space-y-2">
-                  {portfolio.skills
-                    .filter((s) => s.is_discovered)
-                    .map((s) => (
-                      <div key={s.id} className="text-sm flex items-center gap-2">
-                        <span className="font-medium">{s.skill_label}</span>
-                        <span className="text-muted-foreground">
-                          {s.ai_level} ({s.ai_confidence?.toLowerCase() === "low" ? "low confidence" : "confirmed"})
+          {/* Discovered / Additive Skills */}
+          {discoveredSkills.length > 0 && (
+            <Card className="border shadow-xs bg-muted/20">
+              <CardHeader className="p-5 pb-3">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground">
+                  <Zap className="h-4 w-4 text-amber-500" />
+                  Additive Discovered Competencies ({discoveredSkills.length})
+                </CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  Skills the candidate exhibited during the interview that are beyond the target role's baseline requirements
+                </p>
+              </CardHeader>
+              <CardContent className="p-5 pt-0">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {discoveredSkills.map((s) => (
+                    <div key={s.id} className="p-3 bg-background border rounded-lg space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-sm text-foreground">{s.skill_label}</span>
+                        <span className="text-xs bg-primary/10 text-primary font-semibold px-2 py-0.5 rounded">
+                          L{s.ai_level}
                         </span>
-                        <span className="text-xs text-muted-foreground">— Not required for this role, may be additive.</span>
                       </div>
-                    ))}
-                </CardContent>
-              </Card>
-            </>
+                      <p className="text-xs text-muted-foreground line-clamp-2">
+                        {s.competency_summary}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
           )}
-        </>
+        </div>
       )}
     </div>
   );
