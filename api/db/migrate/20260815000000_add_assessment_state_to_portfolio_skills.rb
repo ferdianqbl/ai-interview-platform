@@ -71,7 +71,8 @@ class AddAssessmentStateToPortfolioSkills < ActiveRecord::Migration[7.0]
     change_column_null :portfolio_skills, :ai_confidence, false
     change_column_null :portfolio_skills, :ai_level, false
     remove_column :portfolio_skills, :assessment_state
-    drop_enum :portfolio_assessment_state
+    # drop_enum arrived in Rails 7.1; this app is on 7.0, so drop the type directly.
+    execute('DROP TYPE IF EXISTS portfolio_assessment_state')
   end
 
   private

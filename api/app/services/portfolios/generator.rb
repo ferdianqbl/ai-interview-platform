@@ -133,10 +133,11 @@ module Portfolios
     end
 
     def acquire_write_lock!(portfolio)
+      # Both operands are integers, coerced explicitly — no interpolation risk,
+      # and no dependency on sanitize_sql_array's visibility across versions.
+      key = Integer(portfolio.id) % INT4_MAX
       acquired = ActiveRecord::Base.connection.select_value(
-        ActiveRecord::Base.sanitize_sql_array(
-          ['SELECT pg_try_advisory_xact_lock(?, ?)', LOCK_NAMESPACE, portfolio.id % INT4_MAX]
-        )
+        "SELECT pg_try_advisory_xact_lock(#{LOCK_NAMESPACE}, #{key})"
       )
 
       raise ConcurrentGenerationError unless ActiveModel::Type::Boolean.new.cast(acquired)

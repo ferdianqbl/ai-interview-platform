@@ -24,6 +24,7 @@ class AddNarrativeStatusToFitGapReports < ActiveRecord::Migration[7.0]
 
   def down
     remove_column :fit_gap_reports, :narrative_status
-    drop_enum :fit_gap_narrative_status
+    # drop_enum arrived in Rails 7.1; this app is on 7.0, so drop the type directly.
+    execute('DROP TYPE IF EXISTS fit_gap_narrative_status')
   end
 end
