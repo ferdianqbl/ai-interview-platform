@@ -208,6 +208,9 @@ module Api
           skill_comparisons: report.skill_comparisons,
           culture_narrative: report.culture_narrative,
           overall_narrative: report.overall_narrative,
+          # Lets the client distinguish "the model failed" from "there is
+          # nothing to say", instead of inferring failure from a null.
+          narrative_status:  report.narrative_status,
           generated_at:      report.generated_at
         }
       end
