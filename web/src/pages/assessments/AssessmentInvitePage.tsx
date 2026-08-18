@@ -177,6 +177,8 @@ export default function AssessmentInvitePage() {
     } finally {
       setCreatingSession(false);
     }
+  };
+
   const getCandidateInviteUrl = (session?: Session | null) => {
     if (!session) return "";
     if (session.invite_token) {
