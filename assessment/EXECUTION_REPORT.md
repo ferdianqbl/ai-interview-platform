@@ -1,7 +1,7 @@
 # Fullstack Product Engineer Case Study: Execution Report & Monozukuri Submission
 **Target Platform:** [AI Interview Platform (`api/` & `web/`)](https://github.com/ferdianqbl/ai-interview-platform)  
 **Candidate / Engineer:** Product Engineer  
-**Pull Request Link:** [https://github.com/ferdianqbl/ai-interview-platform/tree/feature/monozukuri-portfolio-and-fitgap-revamp](https://github.com/ferdianqbl/ai-interview-platform/tree/feature/monozukuri-portfolio-and-fitgap-revamp)  
+**Pull Request Link:** [https://github.com/rakamindev/ai-interview-platform/pull/46](https://github.com/rakamindev/ai-interview-platform/pull/46)  
 **Video Demonstration Walkthrough:** [3-5 Minute Video Walkthrough Link](#) *(Loom / YouTube Unlisted / Google Drive)*  
 **Submission Date:** August 2026  
 

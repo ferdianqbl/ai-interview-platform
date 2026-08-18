@@ -29,7 +29,7 @@
 | **Step 5** | Polished UI/UX (handling Loading, Empty, Error, Partial, Long Text, Responsive). | Explicit 6-state design matrix in `PRD.md` 6 and `FRONTEND_ARCHITECTURE.md` 4. | ✅ **VERIFIED** |
 | **Step 5** | Seeded Fault Test (prove tests catch logic defect on scratch branch, visible git revert). | Seeded fault plan specified in `EXECUTION_PLAN.md` Phase 5.1 and Section 6 of this matrix. | ✅ **VERIFIED** |
 | **Step 5** | AI Verification Moment (document real instance where AI code was wrong/risky and corrected). | Case study on immutable `ai_level` vs destructive override update documented in `EXECUTION_PLAN.md` 5.2. | ✅ **VERIFIED** |
-| **Step 5** | Pull Request Options (Single PR or Umbrella PR + sub-PRs). | Structured PR strategy defined in `EXECUTION_PLAN.md` Phase 6.1. | ✅ **VERIFIED** |
+| **Step 5** | Pull Request Options (Single PR or Umbrella PR + sub-PRs). | Open PR on official repo: [rakamindev/ai-interview-platform#46](https://github.com/rakamindev/ai-interview-platform/pull/46) tracking feature branch. | ✅ **VERIFIED** |
 | **Step 6** | Final Submission (Single PDF Document uploaded before Wednesday 19 August, 13:00 WIB). | Submission compilation workflow defined in `TECH_TEST_SUMMARY.md` Section 8. | ✅ **VERIFIED** |
 | **Step 6** | Embedded Visual Screenshots (Desktop, Mobile, all 6 interaction states). | Screenshot capture plan outlined in `EXECUTION_PLAN.md` Phase 6.3. | ✅ **VERIFIED** |
 | **Step 6** | Video Demonstration Link (3 to 5-minute video walkthrough on Loom/YouTube/Drive). | Video script outline documented in `EXECUTION_PLAN.md` Phase 6.2. | ✅ **VERIFIED** |
