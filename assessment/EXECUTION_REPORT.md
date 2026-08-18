@@ -2,7 +2,7 @@
 **Target Platform:** [AI Interview Platform (`api/` & `web/`)](https://github.com/ferdianqbl/ai-interview-platform)  
 **Candidate / Engineer:** Product Engineer  
 **Pull Request Link:** [https://github.com/rakamindev/ai-interview-platform/pull/46](https://github.com/rakamindev/ai-interview-platform/pull/46)  
-**Video Demonstration Walkthrough:** [3-5 Minute Video Walkthrough Link](#) *(Loom / YouTube Unlisted / Google Drive)*  
+**Video Demonstration Walkthrough:** [https://www.awesomescreenshot.com/video/55666106?key=63cd1783c7a06deab95b8e4ba6ab0e96](https://www.awesomescreenshot.com/video/55666106?key=63cd1783c7a06deab95b8e4ba6ab0e96)  
 **Submission Date:** August 2026  
 
 ---
