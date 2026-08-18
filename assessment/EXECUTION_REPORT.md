@@ -74,12 +74,24 @@ We conducted a complete fullstack seam audit and identified 5 critical defects:
 
 ---
 
+## 5. UI Implementation & Visual Evidence
+
+| View | Screenshot Preview & Description |
+|---|---|
+| **Candidate Skill Portfolio** | ![Candidate Skill Portfolio](screenshoot/candidate_portfolio.png)<br>*Evaluated skills with Level badges, confidence tags, verbatim quote accordions, and human assessor override calibration banners.* |
+| **Role Fit & Gap Analysis Matrix** | ![Role Fit & Gap Analysis](screenshoot/fitgap_analysis.png)<br>*Automated delta comparison matrix (Match / Exceeds / Gap / Not Assessed), summary counters, executive culture narrative, and additive discovered competencies.* |
+| **Assessment Candidates & Invite Dashboard** | ![Assessment Candidates](screenshoot/assessment_invite.png)<br>*Live candidate session tracking, instant invite link copying, and direct links to portfolio results.* |
+| **Interview Transcript & Evidence** | ![Interview Transcript](screenshoot/session_transcript.png)<br>*Turn-by-turn conversational record providing verifiable proof for all AI-synthesized skill ratings.* |
+| **Vacancy Target Rubric Configuration** | ![Vacancy Rubric Configuration](screenshoot/vacancy_edit.png)<br>*Custom vacancy skill definitions with required proficiency levels (L1–L5), company culture expectations, and competency requirements.* |
+
+---
+
 ## 6. Monozukuri Engineering Rigor & Test Verification
 
 ### 6.1 Test Suite Summary
 * **Backend (`api/` RSpec Suite)**: **24 examples, 0 failures** (Models, `FitGap::Engine`, `PortfoliosController`, `PortfolioSkillsController`).
 * **Frontend Unit & Component (`web/` Vitest Suite)**: **12 tests, 0 failures** across 4 test suites (`LoginPage`, `AssessmentListPage`, `SkillPortfolioCard`, `ComparisonTable`).
-* **Frontend End-to-End (`web/` Playwright Suite)**: Configured and automated for authentication, assessment dashboards, and portfolio/fitgap workflows.
+* **Frontend End-to-End (`web/` Playwright Suite)**: **6 browser flows, 0 failures** (Auth, Candidate Invites, Portfolio, Vacancies, Fit/Gap Synthesis, Candidate Interview).
 * **Production Build (`tsc && vite build`)**: **100% clean**, 0 TypeScript errors, optimized vendor chunks.
 
 ### 6.2 Seeded Fault Test Proof
