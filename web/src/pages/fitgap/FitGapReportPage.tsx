@@ -72,9 +72,17 @@ export default function FitGapReportPage() {
     if (!portfolio) return;
     setRegenerating(true);
     try {
-      await portfoliosApi.regenerateFitGap(portfolio.id, Number(vacancyId));
-      setReport(null);
-      setGenerating(true);
+      const res = await portfoliosApi.regenerateFitGap(portfolio.id, Number(vacancyId));
+      const resData = res.data as any;
+      if (resData?.report) {
+        setReport(resData.report);
+        setGenerating(false);
+      } else {
+        setReport(null);
+        setGenerating(true);
+      }
+    } catch {
+      fetchReport();
     } finally {
       setRegenerating(false);
     }
@@ -201,6 +209,25 @@ export default function FitGapReportPage() {
               Calculating competency level deltas, checking human assessor adjustments, and generating executive hiring narratives via Gemini AI.
             </p>
           </div>
+        </div>
+      )}
+
+      {/* Not Yet Generated State */}
+      {!generating && !report && (
+        <div className="border rounded-xl p-12 text-center space-y-4 bg-muted/20">
+          <div className="mx-auto w-12 h-12 flex items-center justify-center rounded-full bg-primary/10 text-primary">
+            <Sparkles className="h-6 w-6" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-lg text-foreground">Ready to Synthesize Role Fit</h3>
+            <p className="text-sm text-muted-foreground max-w-md mx-auto mt-1">
+              Compare this candidate's verified competencies against <strong>{vacancy?.role_title || "the target role"}</strong>.
+            </p>
+          </div>
+          <Button onClick={handleRegenerate} disabled={regenerating}>
+            {regenerating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
+            Generate Fit/Gap Report
+          </Button>
         </div>
       )}
 
