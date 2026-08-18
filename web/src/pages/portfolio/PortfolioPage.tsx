@@ -102,8 +102,11 @@ export default function PortfolioPage() {
   if (loading) {
     return (
       <div className="max-w-4xl mx-auto space-y-6 p-4">
-        <div className="flex items-center justify-between">
-          <Skeleton className="h-8 w-64" />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b">
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-foreground">Candidate Skill Portfolio</h1>
+            <Skeleton className="h-4 w-40 mt-1" />
+          </div>
           <div className="flex gap-2">
             <Skeleton className="h-9 w-24" />
             <Skeleton className="h-9 w-20" />

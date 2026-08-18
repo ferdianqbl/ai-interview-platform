@@ -22,7 +22,19 @@ export default function SkillPortfolioCard({
   const isOverridden = !!override;
   const [showAllQuotes, setShowAllQuotes] = useState(false);
 
-  const quotes = skill.evidence || [];
+  const rawQuotes = skill.evidence || [];
+  const quotes: string[] = Array.isArray(rawQuotes)
+    ? rawQuotes
+    : typeof rawQuotes === "string"
+    ? (function () {
+        try {
+          const parsed = JSON.parse(rawQuotes);
+          return Array.isArray(parsed) ? parsed : [rawQuotes];
+        } catch {
+          return [rawQuotes];
+        }
+      })()
+    : [];
   const displayQuotes = showAllQuotes ? quotes : quotes.slice(0, 2);
 
   return (

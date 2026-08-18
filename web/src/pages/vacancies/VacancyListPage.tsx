@@ -15,7 +15,7 @@ export default function VacancyListPage() {
 
   useEffect(() => {
     vacanciesApi.list()
-      .then((res) => setVacancies(res.data.vacancies))
+      .then((res) => setVacancies(res.data.vacancies || []))
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, []);

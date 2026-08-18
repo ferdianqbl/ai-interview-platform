@@ -78,7 +78,8 @@ We conducted a complete fullstack seam audit and identified 5 critical defects:
 
 ### 6.1 Test Suite Summary
 * **Backend (`api/` RSpec Suite)**: **24 examples, 0 failures** (Models, `FitGap::Engine`, `PortfoliosController`, `PortfolioSkillsController`).
-* **Frontend (`web/` Vitest Suite)**: **7 tests, 0 failures** (`SkillPortfolioCard`, `ComparisonTable`, interaction states).
+* **Frontend Unit & Component (`web/` Vitest Suite)**: **12 tests, 0 failures** across 4 test suites (`LoginPage`, `AssessmentListPage`, `SkillPortfolioCard`, `ComparisonTable`).
+* **Frontend End-to-End (`web/` Playwright Suite)**: Configured and automated for authentication, assessment dashboards, and portfolio/fitgap workflows.
 * **Production Build (`tsc && vite build`)**: **100% clean**, 0 TypeScript errors, optimized vendor chunks.
 
 ### 6.2 Seeded Fault Test Proof

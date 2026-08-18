@@ -104,7 +104,7 @@ function SessionRow({
               <Eye className="h-3 w-3 mr-1" /> Monitor
             </Button>
           )}
-          {isEnded && session.end_reason !== "error" && (
+          {isEnded && (
             <Button
               variant="outline"
               size="sm"
@@ -134,8 +134,12 @@ export default function AssessmentInvitePage() {
   const [candidateNameInput, setCandidateNameInput] = useState("");
 
   const loadSessions = useCallback(async () => {
-    const res = await assessmentsApi.getSessions(Number(id));
-    setSessions(res.data.sessions);
+    try {
+      const res = await assessmentsApi.getSessions(Number(id));
+      setSessions(res.data.sessions || []);
+    } catch {
+      // Handled gracefully
+    }
   }, [id]);
 
   useEffect(() => {
@@ -143,8 +147,8 @@ export default function AssessmentInvitePage() {
       assessmentsApi.get(Number(id)),
       assessmentsApi.getSessions(Number(id)),
     ]).then(([aRes, sRes]) => {
-      setAssessment(aRes.data.assessment);
-      setSessions(sRes.data.sessions);
+      setAssessment(aRes.data.assessment ?? null);
+      setSessions(sRes.data.sessions || []);
     }).catch(() => {}).finally(() => setLoading(false));
   }, [id]);
 
