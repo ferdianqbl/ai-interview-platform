@@ -43,6 +43,16 @@ module FitGap
       nil
     end
 
+    def to_level_int(val)
+      return nil if val.blank?
+      if val.is_a?(Numeric)
+        val.to_i
+      else
+        n = val.to_s.gsub(/\D/, '').to_i
+        n > 0 ? n : nil
+      end
+    end
+
     def build_skill_comparisons
       vacancy_skills = @vacancy.vacancy_skills.index_by(&:skill_label)
       portfolio_skills = effective_portfolio_skills  # includes overrides
@@ -50,20 +60,25 @@ module FitGap
       vacancy_skills.map do |label, vacancy_skill|
         portfolio_skill = find_portfolio_skill(portfolio_skills, label, vacancy_skill.skill_id)
 
-        if portfolio_skill
-          candidate_level  = portfolio_skill[:effective_level]
-          expected_level   = vacancy_skill.expected_level
-          delta            = candidate_level - expected_level
-          result           = delta == 0 ? 'match' : (delta > 0 ? 'exceed' : 'gap')
-          is_override      = portfolio_skill[:overridden] || false
-          confidence       = portfolio_skill[:confidence]
+        raw_expected = vacancy_skill.respond_to?(:expected_level) ? vacancy_skill.expected_level : (vacancy_skill.respond_to?(:required_level) ? vacancy_skill.required_level : nil)
+        expected_level = to_level_int(raw_expected) || 1
+
+        if portfolio_skill && portfolio_skill[:effective_level].present?
+          candidate_level = to_level_int(portfolio_skill[:effective_level])
         else
-          candidate_level  = nil
-          expected_level   = vacancy_skill.expected_level
-          delta            = nil
-          result           = 'not_assessed'
-          is_override      = false
-          confidence       = nil
+          candidate_level = nil
+        end
+
+        if candidate_level.present?
+          delta       = candidate_level - expected_level
+          result      = delta == 0 ? 'match' : (delta > 0 ? 'exceed' : 'gap')
+          is_override = portfolio_skill[:overridden] || false
+          confidence  = portfolio_skill[:confidence]
+        else
+          delta       = nil
+          result      = 'not_assessed'
+          is_override = false
+          confidence  = nil
         end
 
         {
