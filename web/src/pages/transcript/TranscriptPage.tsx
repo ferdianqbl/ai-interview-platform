@@ -19,8 +19,8 @@ export default function TranscriptPage() {
       sessionsApi.get(Number(sessionId)),
     ])
       .then(([tRes, sRes]) => {
-        setTurns(tRes.data.turns);
-        setCandidateName(sRes.data.session.candidate_name ?? null);
+        setTurns(tRes.data.turns || []);
+        setCandidateName(sRes.data.session?.candidate_name ?? null);
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false));

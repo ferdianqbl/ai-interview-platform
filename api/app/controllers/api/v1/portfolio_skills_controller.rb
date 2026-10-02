@@ -43,7 +43,11 @@ module Api
         FitGapReport.where(portfolio_id: portfolio.id).each do |report|
           vacancy_id = report.vacancy_id
           report.destroy
-          FitGapGeneratorWorker.perform_async(portfolio.id, vacancy_id)
+          begin
+            FitGapGeneratorWorker.perform_async(portfolio.id, vacancy_id)
+          rescue StandardError => e
+            Rails.logger.warn("[Sidekiq] Failed to enqueue FitGapGeneratorWorker: #{e.message}")
+          end
         end
       end
 

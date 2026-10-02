@@ -29,7 +29,9 @@ class JsonWebToken
   end
 
   def self.hmac_secret
-    ENV.fetch('SECRET_KEY_BASE')
+    ENV['SECRET_KEY_BASE'].presence ||
+      Rails.application.secret_key_base.presence ||
+      'dev_secret_key_base_minimum_64_bytes_fallback_for_local_ai_interview_platform'
   end
   private_class_method :hmac_secret
 end
