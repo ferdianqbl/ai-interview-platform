@@ -1,8 +1,8 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
-import { BrowserRouter } from "react-router-dom";
 import AssessmentListPage from "./AssessmentListPage";
 import { assessmentsApi } from "@/services/assessments";
+import { renderWithProviders } from "@/test/test-utils";
 
 vi.mock("@/services/assessments", () => ({
   assessmentsApi: {
@@ -30,11 +30,7 @@ describe("AssessmentListPage Component", () => {
       },
     } as any);
 
-    render(
-      <BrowserRouter>
-        <AssessmentListPage />
-      </BrowserRouter>
-    );
+    renderWithProviders(<AssessmentListPage />);
 
     await waitFor(() => {
       expect(screen.getByText("Senior Backend Engineer — Demo")).toBeInTheDocument();
@@ -49,11 +45,7 @@ describe("AssessmentListPage Component", () => {
       },
     } as any);
 
-    render(
-      <BrowserRouter>
-        <AssessmentListPage />
-      </BrowserRouter>
-    );
+    renderWithProviders(<AssessmentListPage />);
 
     await waitFor(() => {
       expect(screen.getByText(/No assessments yet/i)).toBeInTheDocument();

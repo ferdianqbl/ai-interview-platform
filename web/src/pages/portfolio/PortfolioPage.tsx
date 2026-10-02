@@ -1,66 +1,74 @@
-import { useEffect, useState, useCallback } from "react";
+import { useState, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SkillPortfolioCard from "@/components/portfolio/SkillPortfolioCard";
-import { sessionsApi } from "@/services/sessions";
-import { vacanciesApi } from "@/services/vacancies";
+import {
+  usePortfolioQuery,
+  useSaveOverrideMutation,
+  useRegeneratePortfolioMutation,
+  useVacanciesQuery,
+  useSessionQuery,
+} from "@/hooks/queries";
 import { portfoliosApi } from "@/services/portfolios";
-import { usePolling } from "@/hooks/usePolling";
-import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText, Briefcase, AlertCircle, CheckCircle2 } from "lucide-react";
-import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
+import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText, Briefcase, AlertCircle } from "lucide-react";
+import type { AssessorOverride } from "@/types";
 
 export default function PortfolioPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
   const navigate = useNavigate();
-  const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
-  const [generating, setGenerating] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [overrides, setOverrides] = useState<Record<number, AssessorOverride>>({});
-  const [vacancies, setVacancies] = useState<Vacancy[]>([]);
+
   const [selectedVacancy, setSelectedVacancy] = useState<string>("");
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
-  const [candidateName, setCandidateName] = useState<string | null>(null);
-  const [roleTitle, setRoleTitle] = useState<string | null>(null);
 
-  const fetchPortfolio = useCallback(async () => {
-    try {
-      const res = await sessionsApi.getPortfolio(Number(sessionId));
-      const data = res.data as any;
-      if (data.status === "generating" || data.portfolio?.generation_status === "generating" || data.portfolio?.generation_status === "pending") {
-        setGenerating(true);
-      } else if (data.portfolio) {
-        setPortfolio(data.portfolio);
-        setGenerating(false);
-        const overrideMap: Record<number, AssessorOverride> = {};
-        (data.portfolio.overrides || []).forEach((o: AssessorOverride) => {
-          overrideMap[o.portfolio_skill_id] = o;
-        });
-        setOverrides(overrideMap);
-      }
-    } catch {
-      // Handled gracefully in UI states
+  // TanStack Query: cached portfolio with automatic reactive polling when generating
+  const {
+    data: portfolioData,
+    isLoading: isPortfolioLoading,
+    isError: isPortfolioError,
+    refetch: refetchPortfolio,
+  } = usePortfolioQuery(sessionId);
+
+  // TanStack Query: cached vacancies list
+  const { data: vacancies = [] } = useVacanciesQuery();
+
+  // TanStack Query: cached session metadata
+  const { data: session } = useSessionQuery(sessionId);
+
+  // TanStack Query: optimistic override mutation
+  const saveOverrideMutation = useSaveOverrideMutation(sessionId);
+
+  // TanStack Query: regenerate mutation
+  const regenerateMutation = useRegeneratePortfolioMutation(sessionId);
+
+  const portfolio = portfolioData?.portfolio;
+  const isGenerating =
+    portfolioData?.status === "generating" ||
+    portfolio?.generation_status === "generating" ||
+    portfolio?.generation_status === "pending";
+
+  const overrides = useMemo(() => {
+    const map: Record<number, AssessorOverride> = {};
+    if (portfolio?.overrides) {
+      portfolio.overrides.forEach((o) => {
+        map[o.portfolio_skill_id] = o;
+      });
     }
-  }, [sessionId]);
+    // Also include overrides attached directly to skills
+    if (portfolio?.skills) {
+      portfolio.skills.forEach((s) => {
+        if (s.assessor_override) {
+          map[s.id] = s.assessor_override;
+        }
+      });
+    }
+    return map;
+  }, [portfolio?.overrides, portfolio?.skills]);
 
-  useEffect(() => {
-    Promise.all([fetchPortfolio(), vacanciesApi.list(), sessionsApi.get(Number(sessionId))])
-      .then(([, vRes, sRes]) => {
-        setVacancies(vRes.data.vacancies || []);
-        setCandidateName(sRes.data.session?.candidate_name ?? null);
-        setRoleTitle(sRes.data.session?.assessment?.name ?? null);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [fetchPortfolio, sessionId]);
-
-  // Poll while generating
-  usePolling(fetchPortfolio, 5000, generating);
-
-  const handleOverrideSaved = (skillId: number, override: AssessorOverride) => {
-    setOverrides((prev) => ({ ...prev, [skillId]: override }));
+  const handleSaveOverride = async (skillId: number, overrideLevel: number, notes: string) => {
+    await saveOverrideMutation.mutateAsync({ skillId, overrideLevel, notes });
   };
 
   const handleRunFitGap = () => {
@@ -99,7 +107,7 @@ export default function PortfolioPage() {
     }
   };
 
-  if (loading) {
+  if (isPortfolioLoading && !portfolio) {
     return (
       <div className="max-w-4xl mx-auto space-y-6 p-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b">
@@ -121,6 +129,8 @@ export default function PortfolioPage() {
 
   const configuredSkills = portfolio?.skills?.filter((s) => !s.is_discovered) || [];
   const discoveredSkills = portfolio?.skills?.filter((s) => s.is_discovered) || [];
+  const candidateName = session?.candidate_name ?? null;
+  const roleTitle = session?.assessment?.name ?? null;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 p-4">
@@ -157,7 +167,7 @@ export default function PortfolioPage() {
             <FileText className="h-4 w-4 text-muted-foreground" />
             Transcript
           </Link>
-          {!generating && portfolio && portfolio.generation_status === "complete" && (
+          {!isGenerating && portfolio && portfolio.generation_status === "complete" && (
             <>
               <Button
                 variant="outline"
@@ -185,7 +195,7 @@ export default function PortfolioPage() {
       </div>
 
       {/* Generating State */}
-      {generating && (
+      {isGenerating && (
         <div className="border rounded-xl p-12 text-center space-y-4 bg-muted/20">
           <div className="relative mx-auto w-12 h-12 flex items-center justify-center">
             <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -200,7 +210,7 @@ export default function PortfolioPage() {
       )}
 
       {/* Failed State */}
-      {!generating && portfolio?.generation_status === "failed" && (
+      {!isGenerating && (portfolio?.generation_status === "failed" || isPortfolioError) && (
         <div className="border border-destructive/30 bg-destructive/5 rounded-xl p-6 text-center space-y-3">
           <div className="inline-flex p-3 rounded-full bg-destructive/10 text-destructive mb-1">
             <AlertCircle className="h-6 w-6" />
@@ -208,25 +218,31 @@ export default function PortfolioPage() {
           <div>
             <h3 className="font-semibold text-base text-foreground">Portfolio Generation Halted</h3>
             <p className="text-sm text-muted-foreground max-w-md mx-auto mt-1">
-              {portfolio.generation_error || "An upstream error occurred during analysis. You can trigger a clean retry below."}
+              {portfolio?.generation_error || "An upstream error occurred during analysis. You can trigger a clean retry below."}
             </p>
           </div>
           <Button
             variant="outline"
             size="sm"
             onClick={async () => {
-              await sessionsApi.regeneratePortfolio(Number(sessionId));
-              setGenerating(true);
+              await regenerateMutation.mutateAsync();
+              refetchPortfolio();
             }}
+            disabled={regenerateMutation.isPending}
             className="mt-2 border-destructive/30 hover:bg-destructive/10"
           >
-            <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Retry Synthesis
+            {regenerateMutation.isPending ? (
+              <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+            ) : (
+              <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+            )}
+            Retry Synthesis
           </Button>
         </div>
       )}
 
       {/* Ready State */}
-      {!generating && portfolio?.generation_status === "complete" && (
+      {!isGenerating && portfolio?.generation_status === "complete" && (
         <>
           {/* Configured Assessment Skills */}
           <div className="space-y-3.5">
@@ -244,7 +260,7 @@ export default function PortfolioPage() {
                     key={skill.id}
                     skill={skill}
                     override={overrides[skill.id]}
-                    onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
+                    onSaveOverride={(level, notes) => handleSaveOverride(skill.id, level, notes)}
                   />
                 ))}
               </div>
@@ -275,7 +291,7 @@ export default function PortfolioPage() {
                     key={skill.id}
                     skill={skill}
                     override={overrides[skill.id]}
-                    onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
+                    onSaveOverride={(level, notes) => handleSaveOverride(skill.id, level, notes)}
                   />
                 ))}
               </div>

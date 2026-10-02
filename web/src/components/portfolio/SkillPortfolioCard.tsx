@@ -10,13 +10,15 @@ import type { PortfolioSkill, AssessorOverride } from "@/types";
 interface SkillPortfolioCardProps {
   skill: PortfolioSkill;
   override?: AssessorOverride;
-  onOverrideSaved: (override: AssessorOverride) => void;
+  onOverrideSaved?: (override: AssessorOverride) => void;
+  onSaveOverride?: (overrideLevel: number, notes: string) => Promise<void> | void;
 }
 
 export default function SkillPortfolioCard({
   skill,
   override,
   onOverrideSaved,
+  onSaveOverride,
 }: SkillPortfolioCardProps) {
   const effectiveLevel = override?.override_level ?? parseLevel(skill.ai_level);
   const isOverridden = !!override;
@@ -63,7 +65,12 @@ export default function SkillPortfolioCard({
               <ConfidenceIndicator confidence={skill.ai_confidence} />
             </div>
           </div>
-          <OverridePanel skill={skill} existingOverride={override} onSaved={onOverrideSaved} />
+          <OverridePanel
+            skill={skill}
+            existingOverride={override}
+            onSaved={onOverrideSaved}
+            onSaveOverride={onSaveOverride ? (lvl, notes) => onSaveOverride(lvl, notes) : undefined}
+          />
         </div>
 
         {/* Low confidence callout */}

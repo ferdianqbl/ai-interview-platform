@@ -99,6 +99,7 @@ export interface PortfolioSkill {
   ai_confidence: "high" | "medium" | "low" | string;
   evidence: string[];
   competency_summary: string;
+  assessor_override?: AssessorOverride;
 }
 
 export interface AssessorOverride {

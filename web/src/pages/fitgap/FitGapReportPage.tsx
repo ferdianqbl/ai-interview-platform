@@ -1,16 +1,18 @@
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import ComparisonTable from "@/components/fitgap/ComparisonTable";
+import {
+  usePortfolioQuery,
+  useSessionQuery,
+  useVacancyDetailQuery,
+  useFitGapQuery,
+  useRegenerateFitGapMutation,
+} from "@/hooks/queries";
 import { portfoliosApi } from "@/services/portfolios";
-import { sessionsApi } from "@/services/sessions";
-import { vacanciesApi } from "@/services/vacancies";
-import { usePolling } from "@/hooks/usePolling";
-import { ArrowLeft, Download, Loader2, RefreshCw, Zap, Sparkles, UserCheck, AlertTriangle } from "lucide-react";
-import type { FitGapReport, Portfolio, Vacancy } from "@/types";
+import { ArrowLeft, Download, Loader2, RefreshCw, Zap, Sparkles, UserCheck } from "lucide-react";
 
 export default function FitGapReportPage() {
   const { id, sessionId, vacancyId } = useParams<{
@@ -19,73 +21,38 @@ export default function FitGapReportPage() {
     vacancyId: string;
   }>();
 
-  const [report, setReport] = useState<FitGapReport | null>(null);
-  const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
-  const [vacancy, setVacancy] = useState<Vacancy | null>(null);
-  const [candidateName, setCandidateName] = useState<string | null>(null);
-  const [generating, setGenerating] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
-  const [regenerating, setRegenerating] = useState(false);
 
-  const fetchReport = useCallback(async () => {
-    if (!portfolio) return;
-    try {
-      const res = await portfoliosApi.getFitGap(portfolio.id, Number(vacancyId));
-      setReport(res.data.report);
-      setGenerating(false);
-    } catch (e: any) {
-      if (e?.response?.status === 404 || e?.response?.status === 202) {
-        try {
-          await portfoliosApi.triggerFitGap(portfolio.id, Number(vacancyId));
-          setGenerating(true);
-        } catch {
-          setGenerating(false);
-        }
-      }
-    }
-  }, [portfolio, vacancyId]);
+  // TanStack Query: cached portfolio
+  const { data: portfolioData, isLoading: isPortfolioLoading } = usePortfolioQuery(sessionId);
+  const portfolio = portfolioData?.portfolio;
 
-  useEffect(() => {
-    Promise.all([
-      sessionsApi.getPortfolio(Number(sessionId)),
-      sessionsApi.get(Number(sessionId)),
-      vacanciesApi.get(Number(vacancyId)),
-    ])
-      .then(([pRes, sRes, vRes]) => {
-        const pData = pRes.data as any;
-        if (pData.portfolio) setPortfolio(pData.portfolio);
-        setCandidateName(sRes.data.session?.candidate_name ?? null);
-        setVacancy(vRes.data.vacancy ?? null);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [sessionId, vacancyId]);
+  // TanStack Query: cached session metadata
+  const { data: session } = useSessionQuery(sessionId);
 
-  useEffect(() => {
-    if (portfolio) fetchReport();
-  }, [portfolio, fetchReport]);
+  // TanStack Query: cached vacancy details
+  const { data: vacancy } = useVacancyDetailQuery(vacancyId);
 
-  usePolling(fetchReport, 5000, generating && !!portfolio);
+  // TanStack Query: cached fit/gap report with automatic polling when generating
+  const {
+    data: fitgapData,
+    isLoading: isFitgapLoading,
+    refetch: refetchFitgap,
+  } = useFitGapQuery(portfolio?.id, vacancyId);
+
+  // TanStack Query: regenerate mutation with cache invalidation
+  const regenerateMutation = useRegenerateFitGapMutation(portfolio?.id, vacancyId);
+
+  const report = fitgapData?.report;
+  const isGenerating = Boolean(
+    fitgapData?.status === "generating" ||
+    (portfolio?.id && !report && isFitgapLoading)
+  );
 
   const handleRegenerate = async () => {
     if (!portfolio) return;
-    setRegenerating(true);
-    try {
-      const res = await portfoliosApi.regenerateFitGap(portfolio.id, Number(vacancyId));
-      const resData = res.data as any;
-      if (resData?.report) {
-        setReport(resData.report);
-        setGenerating(false);
-      } else {
-        setReport(null);
-        setGenerating(true);
-      }
-    } catch {
-      fetchReport();
-    } finally {
-      setRegenerating(false);
-    }
+    await regenerateMutation.mutateAsync();
+    refetchFitgap();
   };
 
   const handleExport = async (format: "pdf" | "json") => {
@@ -109,6 +76,8 @@ export default function FitGapReportPage() {
     }
   };
 
+  const loading = (isPortfolioLoading && !portfolio) || (isFitgapLoading && !report && !isGenerating);
+
   if (loading) {
     return (
       <div className="max-w-4xl mx-auto space-y-6 p-4">
@@ -129,6 +98,7 @@ export default function FitGapReportPage() {
   }
 
   const discoveredSkills = portfolio?.skills?.filter((s) => s.is_discovered) || [];
+  const candidateName = session?.candidate_name ?? null;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 p-4">
@@ -163,10 +133,14 @@ export default function FitGapReportPage() {
               variant="outline"
               size="sm"
               onClick={handleRegenerate}
-              disabled={regenerating || generating}
+              disabled={regenerateMutation.isPending || isGenerating}
               className="shadow-xs"
             >
-              {regenerating ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <RefreshCw className="h-4 w-4 mr-1.5 text-muted-foreground" />}
+              {regenerateMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-1" />
+              ) : (
+                <RefreshCw className="h-4 w-4 mr-1.5 text-muted-foreground" />
+              )}
               Regenerate Analysis
             </Button>
             {report && (
@@ -198,7 +172,7 @@ export default function FitGapReportPage() {
       </div>
 
       {/* Generating State */}
-      {generating && (
+      {isGenerating && (
         <div className="border rounded-xl p-12 text-center space-y-4 bg-muted/20">
           <div className="relative mx-auto w-12 h-12 flex items-center justify-center">
             <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -213,7 +187,7 @@ export default function FitGapReportPage() {
       )}
 
       {/* Not Yet Generated State */}
-      {!generating && !report && (
+      {!isGenerating && !report && (
         <div className="border rounded-xl p-12 text-center space-y-4 bg-muted/20">
           <div className="mx-auto w-12 h-12 flex items-center justify-center rounded-full bg-primary/10 text-primary">
             <Sparkles className="h-6 w-6" />
@@ -224,8 +198,12 @@ export default function FitGapReportPage() {
               Compare this candidate's verified competencies against <strong>{vacancy?.role_title || "the target role"}</strong>.
             </p>
           </div>
-          <Button onClick={handleRegenerate} disabled={regenerating}>
-            {regenerating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
+          <Button onClick={handleRegenerate} disabled={regenerateMutation.isPending}>
+            {regenerateMutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <Sparkles className="h-4 w-4 mr-2" />
+            )}
             Generate Fit/Gap Report
           </Button>
         </div>
