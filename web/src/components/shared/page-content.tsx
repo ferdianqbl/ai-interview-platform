@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import React, { ReactNode } from "react";
+import { ReactNode } from "react";
 
 export function PageContent({
   children,
@@ -11,7 +11,7 @@ export function PageContent({
   return (
     <div
       className={cn(
-        "flex flex-1 flex-col gap-4 p-4 md:gap-6 md:p-6 lg:p-8 max-w-7xl mx-auto w-full",
+        "flex flex-1 flex-col gap-6 w-full",
         className
       )}
     >
@@ -34,20 +34,20 @@ export function PageHeader({
   return (
     <div
       className={cn(
-        "flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between",
+        "flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between",
         className
       )}
     >
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
+      <div className="space-y-1">
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-foreground">
           {title}
         </h1>
         {subtitle && (
-          <p className="text-sm text-muted-foreground mt-0.5">{subtitle}</p>
+          <p className="text-sm text-muted-foreground leading-relaxed">{subtitle}</p>
         )}
       </div>
       {children && (
-        <div className="flex items-center gap-2 mt-2 sm:mt-0">{children}</div>
+        <div className="flex flex-wrap items-center gap-2 mt-2 sm:mt-0 shrink-0">{children}</div>
       )}
     </div>
   );

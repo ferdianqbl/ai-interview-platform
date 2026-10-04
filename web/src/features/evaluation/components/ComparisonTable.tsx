@@ -54,7 +54,7 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
     <div className="space-y-4">
       <div className="overflow-hidden rounded-xl border bg-card shadow-xs">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left border-collapse">
+          <table className="w-full min-w-[540px] text-sm text-left border-collapse">
             <thead>
               <tr className="border-b bg-muted/40 text-muted-foreground text-xs uppercase tracking-wider">
                 <th className="px-5 py-3.5 font-medium">Skill Dimension</th>
