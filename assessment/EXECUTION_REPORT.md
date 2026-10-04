@@ -90,7 +90,7 @@ We conducted a complete fullstack seam audit and identified 5 critical defects:
 
 ### 6.1 Test Suite Summary
 * **Backend (`api/` RSpec Suite)**: **24 examples, 0 failures** (Models, `FitGap::Engine`, `PortfoliosController`, `PortfolioSkillsController`).
-* **Frontend Unit & Component (`web/` Vitest Suite)**: **12 tests, 0 failures** across 4 test suites (`LoginPage`, `AssessmentListPage`, `SkillPortfolioCard`, `ComparisonTable`).
+* **Frontend Unit & Component (`web/` Vitest Suite)**: **16 tests, 0 failures** across 5 test suites (`LoginPage`, `AssessmentListPage`, `SkillPortfolioCard`, `ComparisonTable`, and `usePortfolioQuery` testing optimistic mutations, cache rollback, and real-time cross-feature in-memory recalculation).
 * **Frontend End-to-End (`web/` Playwright Suite)**: **6 browser flows, 0 failures** (Auth, Candidate Invites, Portfolio, Vacancies, Fit/Gap Synthesis, Candidate Interview).
 * **Production Build (`tsc && vite build`)**: **100% clean**, 0 TypeScript errors, optimized vendor chunks.
 
@@ -126,12 +126,13 @@ To prove the test harness is active, reliable, and capable of catching subtle re
 ┌────────────────────────────────────────────────────────┐
 │               CLAIMED ENGINEERING DEPTH                │
 ├───────────────────────────┬────────────────────────────┤
-│   Backend Depth (55%)     │   Frontend Depth (45%)     │
-│ • FitGap Rule Engine      │ • 6-State Interaction UI   │
-│ • Override Event Sync     │ • Expandable Quote Blocks  │
-│ • Gemini Fallback Logic   │ • Color-Coded Delta Badges │
-│ • Complete RSpec Harness  │ • Vitest Component Tests   │
-│ • UU PDP Safe Logging     │ • Full Mobile/Tablet Grid  │
+│   Backend Depth (50%)     │   Frontend Depth (50%)     │
+│ • FitGap Rule Engine      │ • Vertical Feature Slices  │
+│ • Override Event Sync     │ • In-Memory Cache Sync     │
+│ • Gemini Fallback Logic   │ • Optimistic UI Mutations  │
+│ • Complete RSpec Harness  │ • 6-State Interaction UI   │
+│ • UU PDP Safe Logging     │ • Vitest Component Tests   │
+│ • Idempotent Workers      │ • Collapsible Shell Layout │
 └───────────────────────────┴────────────────────────────┘
 ```
 

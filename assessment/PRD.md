@@ -86,7 +86,7 @@ In accordance with **Undang-Undang No. 27 Tahun 2022 tentang Pelindungan Data Pr
 * **FR-PORT-01**: The system must extract candidate quotes and assign an AI Level (1–5) and Confidence (`high`, `medium`, `low`) for all configured and discovered skills post-interview.
 * **FR-PORT-02**: The UI must display each skill with its effective level badge, confidence indicator, discovered badge (if applicable), competency summary, and expandable evidence quotes.
 * **FR-PORT-03**: Assessors must be able to submit level overrides (1–5) with mandatory notes (`assessor_notes`). The original `ai_level` must remain immutable in the database for auditing.
-* **FR-PORT-04**: When an override is submitted, the UI must optimistically update the effective level badge and display an "Assessor Adjusted" indicator.
+* **FR-PORT-04**: When an override is submitted, the UI must optimistically update the effective level badge, display an "Assessor Adjusted" indicator, and immediately recalculate dependent cached Fit/Gap reports in-memory (deltas, match results, and summary counters) in real-time with zero server refetching.
 
 ### 4.2 Vacancy Fit/Gap Matching Engine (Backend & Frontend)
 * **FR-FIT-01**: The system must calculate skill level deltas between the candidate's effective skill level (factoring in overrides) and the vacancy's `expected_level`.
