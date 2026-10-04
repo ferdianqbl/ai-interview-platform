@@ -10,6 +10,7 @@ interface UseAudioWebSocketOptions {
   onStateChange: (state: InterviewState) => void;
   onSpeakerChange: (speaker: InterviewSpeaker) => void;
   onReconnected?: () => void;
+  onError?: (message: string) => void;
 }
 
 const RECONNECT_DELAYS = [1000, 2000, 4000];
@@ -22,6 +23,7 @@ export function useAudioWebSocket({
   onStateChange,
   onSpeakerChange,
   onReconnected,
+  onError,
 }: UseAudioWebSocketOptions) {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectAttemptsRef = useRef(0);
@@ -103,7 +105,12 @@ export function useAudioWebSocket({
               onStateChange("complete");
               break;
             case "error":
-              if (!msg.recoverable) onStateChange("complete");
+              if (!msg.recoverable) {
+                sessionEndedRef.current = true;
+                reconnectAttemptsRef.current = RECONNECT_DELAYS.length;
+                onError?.(msg.message || "An unrecoverable session error occurred.");
+                onStateChange("complete");
+              }
               break;
           }
         } catch {
@@ -130,7 +137,7 @@ export function useAudioWebSocket({
         onStateChange("complete");
       }
     };
-  }, [sessionId, token, onAudioChunk, onTranscript, onStateChange, onSpeakerChange]);
+  }, [sessionId, token, onAudioChunk, onTranscript, onStateChange, onSpeakerChange, onReconnected, onError]);
 
   const send = useCallback((buffer: ArrayBuffer) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {

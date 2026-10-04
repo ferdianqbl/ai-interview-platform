@@ -21,7 +21,7 @@ import { useAudioPlayback } from "../hooks/useAudioPlayback";
 import { useAudioWebSocket } from "../hooks/useAudioWebSocket";
 import { sessionsApi } from "@/features/evaluation/services/sessions";
 import HardwareCheck from "../components/HardwareCheck";
-import { CheckCircle, Mic, MicOff } from "lucide-react";
+import { CheckCircle, Mic, MicOff, AlertCircle } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
 
 export default function InterviewPage() {
@@ -33,6 +33,7 @@ export default function InterviewPage() {
   const [transcript, setTranscript] = useState<Pick<TranscriptTurn, "speaker" | "text">[]>([]);
   const [hardwareCheckDone, setHardwareCheckDone] = useState(false); // kept for green banner
   const [connectionLostLong, setConnectionLostLong] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [reconnectedPrompt, setReconnectedPrompt] = useState(false);
   const reconnectedPromptTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const connectionLostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -138,6 +139,7 @@ export default function InterviewPage() {
     onStateChange: handleStateChange,
     onSpeakerChange: handleSpeakerChange,
     onReconnected: handleReconnected,
+    onError: (msg) => setErrorMessage(msg),
   });
 
   const { start: startCapture, stop: stopCapture, mute, unmute } = useAudioCapture({
@@ -161,6 +163,7 @@ export default function InterviewPage() {
 
   const startInterview = useCallback(async () => {
     if (!sessionId) return;
+    setErrorMessage(null);
     setInterviewState("connecting");
     connect();
     await startCapture();
@@ -181,7 +184,9 @@ export default function InterviewPage() {
   }, [stopCapture, stopPlayback, sendJson, disconnect]);
 
   const wsConnectionStatus =
-    interviewState === "reconnecting"
+    errorMessage
+      ? "lost"
+      : interviewState === "reconnecting"
       ? connectionLostLong ? "lost" : "reconnecting"
       : connectionState === "connected"
       ? "connected"
@@ -226,8 +231,23 @@ export default function InterviewPage() {
     );
   }
 
-  // ── State F: Complete ───────────────────────────────────────────────────
+  // ── State F: Complete or Unrecoverable Error ────────────────────────────
   if (interviewState === "complete") {
+    if (errorMessage) {
+      return (
+        <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+          <div className="text-4xl">⚠️</div>
+          <h2 className="text-xl font-semibold">Connection Interrupted</h2>
+          <p className="text-sm text-muted-foreground">{errorMessage}</p>
+          <div className="pt-4 flex items-center justify-center gap-3">
+            <Button variant="outline" onClick={() => window.location.reload()}>
+              Retry Session
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
         <div className="text-4xl">✅</div>
@@ -259,8 +279,16 @@ export default function InterviewPage() {
         )}
       </div>
 
+      {/* Error banner */}
+      {errorMessage && (
+        <div className="flex items-center gap-2 text-sm bg-red-50 border border-red-200 text-red-800 rounded-lg px-4 py-2.5 mt-2">
+          <AlertCircle className="h-4 w-4 shrink-0 text-red-600" />
+          <span>{errorMessage}</span>
+        </div>
+      )}
+
       {/* Reconnecting banner */}
-      {interviewState === "reconnecting" && (
+      {interviewState === "reconnecting" && !errorMessage && (
         connectionLostLong ? (
           <div className="flex items-center gap-2 text-sm bg-red-50 border border-red-200 text-red-800 rounded-lg px-4 py-2.5 mt-2">
             <span className="animate-pulse">●</span>
@@ -295,7 +323,13 @@ export default function InterviewPage() {
           <>
             <VoiceBars
               active={aiSpeaking}
-              label={aiSpeaking ? "AI speaking" : "Listening..."}
+              label={
+                interviewState === "reconnecting"
+                  ? "Reconnecting..."
+                  : aiSpeaking
+                  ? "AI speaking"
+                  : "Listening..."
+              }
               variant="ai"
             />
 

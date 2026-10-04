@@ -59,6 +59,12 @@ class AudioWebSocketMiddleware
     connect_to_gemini(browser_ws, state)
   rescue StandardError => e
     Rails.logger.error("[AudioWS] Exception in on:open: #{e.class}: #{e.message}\n#{e.backtrace.first(5).join("\n")}")
+    error_msg = if e.is_a?(KeyError) && e.message.include?('GEMINI_API_KEY')
+                  'Server configuration error: GEMINI_API_KEY is missing. Please configure config/application.yml.'
+                else
+                  "Unable to connect to AI interview service: #{e.message}"
+                end
+    send_json(browser_ws, type: 'error', code: 'server_error', message: error_msg, recoverable: false) rescue nil
     browser_ws.close
   end
 
@@ -135,19 +141,33 @@ class AudioWebSocketMiddleware
 
   def build_gemini_client(browser_ws, state)
     session = state.session
+    api_key = ENV['GEMINI_API_KEY']
+    use_mock = Rails.env.development? && (api_key.blank? || api_key == 'your_gemini_api_key' || api_key == 'mock')
 
-    state.gemini_client = Gemini::LiveClient.new(
-      system_prompt: session.assessment.system_prompt,
-      on_audio: build_on_audio(browser_ws, state),
-      on_input_transcription: build_on_input_transcription(browser_ws, state, session),
-      on_output_transcription: build_on_output_transcription(browser_ws, state, session),
-      on_model_turn_complete: build_on_model_turn_complete(browser_ws, state, session),
-      on_go_away: ->(time_left:, resumption_token:) { handle_go_away(browser_ws, state, resumption_token) },
-      on_close: ->(code:, reason:) { handle_gemini_close(browser_ws, state, code: code, reason: reason) },
-      on_error: ->(message) { Rails.logger.error("[AudioWS] Gemini error: session=#{session.id} #{message}") },
-      on_resumption_token_update: build_on_resumption_token_update(state, session),
-      on_ready: build_on_ready(browser_ws, state, session)
-    )
+    if use_mock
+      Rails.logger.warn("[AudioWS] Using MockLiveClient simulator in development (GEMINI_API_KEY not configured)")
+      state.gemini_client = Gemini::MockLiveClient.new(
+        system_prompt: session.assessment.system_prompt,
+        on_audio: build_on_audio(browser_ws, state),
+        on_input_transcription: build_on_input_transcription(browser_ws, state, session),
+        on_output_transcription: build_on_output_transcription(browser_ws, state, session),
+        on_model_turn_complete: build_on_model_turn_complete(browser_ws, state, session),
+        on_ready: build_on_ready(browser_ws, state, session)
+      )
+    else
+      state.gemini_client = Gemini::LiveClient.new(
+        system_prompt: session.assessment.system_prompt,
+        on_audio: build_on_audio(browser_ws, state),
+        on_input_transcription: build_on_input_transcription(browser_ws, state, session),
+        on_output_transcription: build_on_output_transcription(browser_ws, state, session),
+        on_model_turn_complete: build_on_model_turn_complete(browser_ws, state, session),
+        on_go_away: ->(time_left:, resumption_token:) { handle_go_away(browser_ws, state, resumption_token) },
+        on_close: ->(code:, reason:) { handle_gemini_close(browser_ws, state, code: code, reason: reason) },
+        on_error: ->(message) { Rails.logger.error("[AudioWS] Gemini error: session=#{session.id} #{message}") },
+        on_resumption_token_update: build_on_resumption_token_update(state, session),
+        on_ready: build_on_ready(browser_ws, state, session)
+      )
+    end
   end
 
   def build_on_audio(browser_ws, state)
