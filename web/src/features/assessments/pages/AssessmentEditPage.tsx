@@ -24,7 +24,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import SkillCard from "../components/SkillCard";
 import SkillPicker from "../components/SkillPicker";
 import { ArrowLeft, Plus, Loader2 } from "lucide-react";
-import { assessmentsApi } from "../services/assessments";
+import { useAssessmentDetailQuery, useUpdateAssessmentMutation } from "../hooks/useAssessmentsQuery";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
 import type { AssessmentSkill } from "@/types";
 import type { AssessmentFormValues } from "./AssessmentNewPage";
@@ -32,10 +32,11 @@ import type { AssessmentFormValues } from "./AssessmentNewPage";
 export default function AssessmentEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const { data: assessment, isLoading: loading } = useAssessmentDetailQuery(id);
+  const updateMutation = useUpdateAssessmentMutation(id);
 
   const form = useForm<AssessmentFormValues>({
     defaultValues: { name: "", time_limit_min: 45, skills: [] },
@@ -45,15 +46,14 @@ export default function AssessmentEditPage() {
   const { fields, append, remove, move } = useFieldArray({ control, name: "skills" });
 
   useEffect(() => {
-    assessmentsApi
-      .get(Number(id))
-      .then((res) => {
-        const a = res.data.assessment;
-        reset({ name: a.name, time_limit_min: a.time_limit_min, skills: a.skills });
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [id, reset]);
+    if (assessment) {
+      reset({
+        name: assessment.name,
+        time_limit_min: assessment.time_limit_min,
+        skills: assessment.skills || [],
+      });
+    }
+  }, [assessment, reset]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -72,9 +72,8 @@ export default function AssessmentEditPage() {
   const onSubmit = async (data: AssessmentFormValues) => {
     if (data.skills.length === 0) { setError("Add at least one skill."); return; }
     setError(null);
-    setSubmitting(true);
     try {
-      await assessmentsApi.update(Number(id), {
+      await updateMutation.mutateAsync({
         name: data.name,
         time_limit_min: data.time_limit_min,
         assessment_skills_attributes: data.skills.map((s, i) => ({ ...s, display_order: i })),
@@ -82,8 +81,6 @@ export default function AssessmentEditPage() {
       navigate(`/assessments/${id}/invite`);
     } catch (e: any) {
       setError(e?.response?.data?.errors?.[0]?.message ?? "Failed to save.");
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -164,8 +161,8 @@ export default function AssessmentEditPage() {
 
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={() => navigate(`/assessments/${id}/invite`)}>Cancel</Button>
-          <Button type="submit" disabled={submitting}>
-            {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+          <Button type="submit" disabled={updateMutation.isPending}>
+            {updateMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Save Changes
           </Button>
         </div>

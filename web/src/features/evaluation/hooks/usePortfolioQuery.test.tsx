@@ -195,4 +195,82 @@ describe("TanStack Query: usePortfolioQuery & useSaveOverrideMutation", () => {
       rolledBackData?.portfolio?.skills[0].assessor_override
     ).toBeUndefined();
   });
+
+  it("cross-feature: optimistically recalculates cached Fit/Gap report deltas and result in real-time when override is saved", async () => {
+    const initialPortfolio = {
+      id: 1,
+      session_id: 10,
+      generation_status: "complete",
+      skills: [
+        {
+          id: 101,
+          skill_id: "sk-db",
+          skill_label: "Database Design",
+          ai_level: 2,
+          ai_confidence: "high",
+          is_discovered: false,
+          evidence: ["Design schemas"],
+          competency_summary: "Good skills",
+        },
+      ],
+      overrides: [],
+    };
+
+    const initialFitGapReport = {
+      status: "complete",
+      report: {
+        id: 999,
+        portfolio_id: 1,
+        vacancy_id: 55,
+        skill_comparisons: [
+          {
+            skill_id: "sk-db",
+            skill_label: "Database Design",
+            expected_level: 3,
+            candidate_level: 2,
+            delta: -1,
+            result: "gap",
+            is_override: false,
+          },
+        ],
+        culture_narrative: "Solid cultural alignment.",
+        overall_narrative: "Good candidate with a gap in DB.",
+        generated_at: new Date().toISOString(),
+      },
+    };
+
+    queryClient.setQueryData(queryKeys.portfolio.bySession(10), {
+      portfolio: initialPortfolio,
+      status: "complete",
+    });
+    queryClient.setQueryData(queryKeys.fitgap.detail(1, 55), initialFitGapReport);
+
+    vi.mocked(portfoliosApi.getOverride).mockResolvedValueOnce({
+      data: {
+        override: {
+          id: 50,
+          portfolio_skill_id: 101,
+          override_level: 4,
+          assessor_notes: "Strong candidate experience.",
+        },
+      },
+    } as any);
+
+    const { result } = renderHook(() => useSaveOverrideMutation(10), { wrapper });
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        skillId: 101,
+        overrideLevel: 4,
+        notes: "Strong candidate experience.",
+      });
+    });
+
+    // Verify cross-feature Fit/Gap cache was recalculated in real-time
+    const updatedFitGap = queryClient.getQueryData<any>(queryKeys.fitgap.detail(1, 55));
+    expect(updatedFitGap?.report?.skill_comparisons[0].candidate_level).toBe(4);
+    expect(updatedFitGap?.report?.skill_comparisons[0].delta).toBe(1);
+    expect(updatedFitGap?.report?.skill_comparisons[0].result).toBe("exceed");
+    expect(updatedFitGap?.report?.skill_comparisons[0].is_override).toBe(true);
+  });
 });

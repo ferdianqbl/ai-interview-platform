@@ -34,8 +34,46 @@ export function useCreateVacancyMutation() {
       const res = await vacanciesApi.create(payload);
       return res.data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.vacancies.all });
+    // Optimistic Update: append immediately to cached vacancies list
+    onMutate: async (payload) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.vacancies.list() });
+      const previousList = queryClient.getQueryData<Vacancy[]>(queryKeys.vacancies.list()) || [];
+
+      const tempId = -Date.now();
+      const optimisticVacancy: Vacancy = {
+        id: tempId,
+        role_title: payload.role_title,
+        culture_dimensions: payload.culture_dimensions || "",
+        competency_expectations: payload.competency_expectations || "",
+        created_at: new Date().toISOString(),
+        skills: (payload.vacancy_skills_attributes || []).map((s, idx) => ({
+          id: -(Date.now() + idx),
+          skill_id: s.skill_id ?? idx,
+          skill_label: s.skill_label || "",
+          expected_level: s.expected_level || 1,
+        })),
+      };
+
+      queryClient.setQueryData<Vacancy[]>(queryKeys.vacancies.list(), [optimisticVacancy, ...previousList]);
+      return { previousList, tempId };
+    },
+    onError: (_err, _variables, context) => {
+      if (context?.previousList) {
+        queryClient.setQueryData(queryKeys.vacancies.list(), context.previousList);
+      }
+    },
+    onSuccess: (data, _variables, context) => {
+      const created = data.vacancy;
+      if (!created) return;
+
+      // Update vacancies list cache with the real saved vacancy
+      queryClient.setQueryData<Vacancy[]>(queryKeys.vacancies.list(), (old = []) => {
+        const withoutTemp = old.filter((v) => v.id !== context?.tempId && v.id !== created.id);
+        return [created, ...withoutTemp];
+      });
+
+      // Seed detail cache directly so detail page loads instantly without server fetch
+      queryClient.setQueryData(queryKeys.vacancies.detail(created.id), created);
     },
   });
 }
@@ -49,10 +87,58 @@ export function useUpdateVacancyMutation(id: number | string | undefined) {
       const res = await vacanciesApi.update(vId, payload);
       return res.data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.vacancies.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.vacancies.detail(vId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.fitgap.all });
+    onMutate: async (payload) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.vacancies.list() });
+      await queryClient.cancelQueries({ queryKey: queryKeys.vacancies.detail(vId) });
+
+      const previousList = queryClient.getQueryData<Vacancy[]>(queryKeys.vacancies.list());
+      const previousDetail = queryClient.getQueryData<Vacancy>(queryKeys.vacancies.detail(vId));
+
+      // Optimistically update detail
+      if (previousDetail) {
+        queryClient.setQueryData<Vacancy>(queryKeys.vacancies.detail(vId), {
+          ...previousDetail,
+          role_title: payload.role_title,
+          culture_dimensions: payload.culture_dimensions,
+          competency_expectations: payload.competency_expectations,
+        });
+      }
+
+      // Optimistically update item in list
+      if (previousList) {
+        queryClient.setQueryData<Vacancy[]>(
+          queryKeys.vacancies.list(),
+          previousList.map((v) =>
+            v.id === vId
+              ? {
+                  ...v,
+                  role_title: payload.role_title,
+                  culture_dimensions: payload.culture_dimensions,
+                  competency_expectations: payload.competency_expectations,
+                }
+              : v
+          )
+        );
+      }
+
+      return { previousList, previousDetail };
+    },
+    onError: (_err, _variables, context) => {
+      if (context?.previousList) {
+        queryClient.setQueryData(queryKeys.vacancies.list(), context.previousList);
+      }
+      if (context?.previousDetail) {
+        queryClient.setQueryData(queryKeys.vacancies.detail(vId), context.previousDetail);
+      }
+    },
+    onSuccess: (data) => {
+      const updated = data.vacancy;
+      if (!updated) return;
+
+      queryClient.setQueryData(queryKeys.vacancies.detail(vId), updated);
+      queryClient.setQueryData<Vacancy[]>(queryKeys.vacancies.list(), (old = []) =>
+        old.map((v) => (v.id === vId ? updated : v))
+      );
     },
   });
 }
@@ -65,8 +151,25 @@ export function useDeleteVacancyMutation() {
       const res = await vacanciesApi.delete(id);
       return res.data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.vacancies.all });
+    onMutate: async (deletedId) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.vacancies.list() });
+      const previousList = queryClient.getQueryData<Vacancy[]>(queryKeys.vacancies.list());
+
+      if (previousList) {
+        queryClient.setQueryData<Vacancy[]>(
+          queryKeys.vacancies.list(),
+          previousList.filter((v) => v.id !== deletedId)
+        );
+      }
+      return { previousList };
+    },
+    onError: (_err, _variables, context) => {
+      if (context?.previousList) {
+        queryClient.setQueryData(queryKeys.vacancies.list(), context.previousList);
+      }
+    },
+    onSuccess: (_data, deletedId) => {
+      queryClient.removeQueries({ queryKey: queryKeys.vacancies.detail(deletedId) });
     },
   });
 }

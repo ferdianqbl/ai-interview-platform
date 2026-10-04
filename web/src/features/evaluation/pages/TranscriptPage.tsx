@@ -1,30 +1,24 @@
-import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { sessionsApi } from "../services/sessions";
+import { useSessionQuery, useSessionTranscriptQuery } from "../hooks/useSessionsQuery";
 import { ArrowLeft, Download } from "lucide-react";
 import type { TranscriptTurn } from "@/types";
 
 export default function TranscriptPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
-  const [turns, setTurns] = useState<TranscriptTurn[]>([]);
-  const [candidateName, setCandidateName] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
 
-  useEffect(() => {
-    Promise.all([
-      sessionsApi.getTranscript(Number(sessionId)),
-      sessionsApi.get(Number(sessionId)),
-    ])
-      .then(([tRes, sRes]) => {
-        setTurns(tRes.data.turns || []);
-        setCandidateName(sRes.data.session?.candidate_name ?? null);
-      })
-      .catch(() => setError(true))
-      .finally(() => setLoading(false));
-  }, [sessionId]);
+  const { data: session, isLoading: isSessionLoading } = useSessionQuery(sessionId);
+  const {
+    data: transcriptData,
+    isLoading: isTranscriptLoading,
+    isError,
+  } = useSessionTranscriptQuery(sessionId);
+
+  const turns = transcriptData?.turns || [];
+  const candidateName = session?.candidate_name ?? null;
+  const loading = isSessionLoading || isTranscriptLoading;
+  const error = isError;
 
   const handleDownload = () => {
     const lines = turns.map((t) => {

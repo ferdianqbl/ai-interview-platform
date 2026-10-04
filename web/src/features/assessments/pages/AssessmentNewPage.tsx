@@ -24,7 +24,7 @@ import { Separator } from "@/components/ui/separator";
 import SkillCard from "../components/SkillCard";
 import SkillPicker from "../components/SkillPicker";
 import { ArrowLeft, Plus, Loader2 } from "lucide-react";
-import { assessmentsApi } from "../services/assessments";
+import { useCreateAssessmentMutation } from "../hooks/useAssessmentsQuery";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
 import type { AssessmentSkill } from "@/types";
 
@@ -37,7 +37,7 @@ export interface AssessmentFormValues {
 
 export default function AssessmentNewPage() {
   const navigate = useNavigate();
-  const [submitting, setSubmitting] = useState(false);
+  const createAssessmentMutation = useCreateAssessmentMutation();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -86,7 +86,6 @@ export default function AssessmentNewPage() {
       return;
     }
     setError(null);
-    setSubmitting(true);
     try {
       const payload = {
         name: data.name,
@@ -97,12 +96,10 @@ export default function AssessmentNewPage() {
           display_order: i,
         })),
       };
-      const res = await assessmentsApi.create(payload);
-      navigate(`/assessments/${res.data.assessment.id}/invite`);
+      const res = await createAssessmentMutation.mutateAsync(payload);
+      navigate(`/assessments/${res.assessment.id}/invite`);
     } catch (e: any) {
       setError(e?.response?.data?.errors?.[0]?.message ?? "Failed to save assessment.");
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -246,8 +243,8 @@ export default function AssessmentNewPage() {
           >
             Cancel
           </Button>
-          <Button type="submit" disabled={submitting}>
-            {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+          <Button type="submit" disabled={createAssessmentMutation.isPending}>
+            {createAssessmentMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Save &amp; Create Session →
           </Button>
         </div>

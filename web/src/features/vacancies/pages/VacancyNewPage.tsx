@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { LevelRadio, SkillPicker } from "@/features/assessments";
-import { vacanciesApi } from "../services/vacancies";
+import { useCreateVacancyMutation } from "../hooks/useVacanciesQuery";
 import { ArrowLeft, Plus, X, Loader2 } from "lucide-react";
 import type { VacancySkill } from "@/types";
 
@@ -20,7 +20,7 @@ interface VacancyFormValues {
 
 export default function VacancyNewPage() {
   const navigate = useNavigate();
-  const [submitting, setSubmitting] = useState(false);
+  const createVacancyMutation = useCreateVacancyMutation();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,9 +32,8 @@ export default function VacancyNewPage() {
 
   const onSubmit = async (data: VacancyFormValues) => {
     setError(null);
-    setSubmitting(true);
     try {
-      await vacanciesApi.create({
+      await createVacancyMutation.mutateAsync({
         role_title: data.role_title,
         culture_dimensions: data.culture_dimensions,
         competency_expectations: data.competency_expectations,
@@ -43,8 +42,6 @@ export default function VacancyNewPage() {
       navigate("/vacancies");
     } catch (e: any) {
       setError(e?.response?.data?.errors?.[0]?.message ?? "Failed to save vacancy.");
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -128,8 +125,8 @@ export default function VacancyNewPage() {
 
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={() => navigate("/vacancies")}>Cancel</Button>
-          <Button type="submit" disabled={submitting}>
-            {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+          <Button type="submit" disabled={createVacancyMutation.isPending}>
+            {createVacancyMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Save Vacancy
           </Button>
         </div>

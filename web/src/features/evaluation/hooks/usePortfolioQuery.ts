@@ -108,17 +108,106 @@ export function useSaveOverrideMutation(sessionId: number | string | undefined) 
         });
       }
 
-      return { previousData };
+      // Cross-Feature Real-Time Sync: Recalculate all cached Fit/Gap reports in memory immediately
+      const fitgapQueries = queryClient.getQueriesData<any>({ queryKey: queryKeys.fitgap.all });
+      const previousFitGapMap: Array<[any, any]> = [];
+
+      for (const [qKey, cachedData] of fitgapQueries) {
+        if (!cachedData?.report?.skill_comparisons) continue;
+        previousFitGapMap.push([qKey, cachedData]);
+
+        const report = cachedData.report;
+        let modified = false;
+
+        const updatedComparisons = report.skill_comparisons.map((sc: any) => {
+          // Match by skill ID or skill label
+          const previousSkills = previousData?.portfolio?.skills || [];
+          const targetSkill = previousSkills.find((s) => s.id === skillId);
+          const isMatch =
+            (targetSkill?.skill_id && sc.skill_id === targetSkill.skill_id) ||
+            (targetSkill?.skill_label &&
+              sc.skill_label?.toLowerCase() === targetSkill.skill_label?.toLowerCase()) ||
+            sc.skill_id === skillId;
+
+          if (!isMatch) return sc;
+          modified = true;
+
+          const expected =
+            typeof sc.expected_level === "number"
+              ? sc.expected_level
+              : Number(sc.expected_level) || 0;
+          const delta = expected > 0 ? overrideLevel - expected : null;
+          const result =
+            expected === 0 || delta === null
+              ? "not_assessed"
+              : delta === 0
+              ? "match"
+              : delta > 0
+              ? "exceed"
+              : "gap";
+
+          return {
+            ...sc,
+            candidate_level: overrideLevel,
+            is_override: true,
+            delta,
+            result,
+          };
+        });
+
+        if (modified) {
+          queryClient.setQueryData(qKey, {
+            ...cachedData,
+            report: {
+              ...report,
+              skill_comparisons: updatedComparisons,
+            },
+          });
+        }
+      }
+
+      return { previousData, previousFitGapMap };
     },
     onError: (_err, _variables, context) => {
       if (context?.previousData) {
         queryClient.setQueryData(queryKeys.portfolio.bySession(sId), context.previousData);
       }
+      if (context?.previousFitGapMap) {
+        context.previousFitGapMap.forEach(([qKey, prevData]) => {
+          queryClient.setQueryData(qKey, prevData);
+        });
+      }
     },
-    onSettled: () => {
-      // Refetch portfolio and invalidate all fitgap reports to guarantee fresh data
-      queryClient.invalidateQueries({ queryKey: queryKeys.portfolio.bySession(sId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.fitgap.all });
+    onSuccess: (data) => {
+      const confirmedOverride = data;
+      if (!confirmedOverride) return;
+
+      // Update the portfolio cache with the confirmed server override record
+      queryClient.setQueryData<PortfolioApiResponse>(
+        queryKeys.portfolio.bySession(sId),
+        (old) => {
+          if (!old?.portfolio) return old;
+          const skills = (old.portfolio.skills || []).map((s) =>
+            s.id === confirmedOverride.portfolio_skill_id
+              ? { ...s, assessor_override: confirmedOverride }
+              : s
+          );
+          const overrides = [
+            ...(old.portfolio.overrides || []).filter(
+              (o) => o.portfolio_skill_id !== confirmedOverride.portfolio_skill_id
+            ),
+            confirmedOverride,
+          ];
+          return {
+            ...old,
+            portfolio: {
+              ...old.portfolio,
+              skills,
+              overrides,
+            },
+          };
+        }
+      );
     },
   });
 }

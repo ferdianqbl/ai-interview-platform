@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,7 +13,11 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { assessmentsApi } from "../services/assessments";
+import {
+  useAssessmentDetailQuery,
+  useAssessmentSessionsQuery,
+  useCreateSessionMutation,
+} from "../hooks/useAssessmentsQuery";
 import { LEVEL_LABELS } from "@/utils/constants";
 import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
 import type { Assessment, Session } from "@/types";
@@ -123,42 +127,19 @@ function SessionRow({
 export default function AssessmentInvitePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [assessment, setAssessment] = useState<Assessment | null>(null);
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [creatingSession, setCreatingSession] = useState(false);
+
+  const { data: assessment, isLoading: isAssessmentLoading } = useAssessmentDetailQuery(id);
+  const { data: sessions = [], isLoading: isSessionsLoading } = useAssessmentSessionsQuery(id);
+  const createSessionMutation = useCreateSessionMutation(id);
+
+  const loading = isAssessmentLoading || isSessionsLoading;
+  const creatingSession = createSessionMutation.isPending;
+
   const [newSession, setNewSession] = useState<Session | null>(null);
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [newSessionCopied, setNewSessionCopied] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [candidateNameInput, setCandidateNameInput] = useState("");
-
-  const loadSessions = useCallback(async () => {
-    try {
-      const res = await assessmentsApi.getSessions(Number(id));
-      setSessions(res.data.sessions || []);
-    } catch {
-      // Handled gracefully
-    }
-  }, [id]);
-
-  useEffect(() => {
-    Promise.all([
-      assessmentsApi.get(Number(id)),
-      assessmentsApi.getSessions(Number(id)),
-    ]).then(([aRes, sRes]) => {
-      setAssessment(aRes.data.assessment ?? null);
-      setSessions(sRes.data.sessions || []);
-    }).catch(() => {}).finally(() => setLoading(false));
-  }, [id]);
-
-  // Poll while any session is live or pending
-  useEffect(() => {
-    const hasActive = sessions.some((s) => s.status !== "ended");
-    if (!hasActive) return;
-    const interval = setInterval(loadSessions, 5000);
-    return () => clearInterval(interval);
-  }, [sessions, loadSessions]);
 
   const openInviteDialog = () => {
     setCandidateNameInput("");
@@ -166,16 +147,15 @@ export default function AssessmentInvitePage() {
   };
 
   const handleInviteCandidate = async () => {
-    setCreatingSession(true);
     setShowInviteDialog(false);
     setNewSession(null);
     try {
-      const res = await assessmentsApi.createSession(Number(id), candidateNameInput.trim() || undefined);
-      const created = res.data.session;
-      setNewSession(created);
-      setSessions((prev) => [created, ...prev]);
-    } finally {
-      setCreatingSession(false);
+      const res = await createSessionMutation.mutateAsync(
+        candidateNameInput.trim() || undefined
+      );
+      setNewSession(res.session);
+    } catch {
+      // Handled gracefully
     }
   };
 

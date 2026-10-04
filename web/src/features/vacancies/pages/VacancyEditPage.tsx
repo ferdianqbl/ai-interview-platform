@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LevelRadio, SkillPicker } from "@/features/assessments";
-import { vacanciesApi } from "../services/vacancies";
+import { useVacancyDetailQuery, useUpdateVacancyMutation } from "../hooks/useVacanciesQuery";
 import { ArrowLeft, Plus, X, Loader2 } from "lucide-react";
 import type { VacancySkill } from "@/types";
 
@@ -22,9 +22,10 @@ interface VacancyFormValues {
 export default function VacancyEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+
+  const { data: vacancy, isLoading: loading } = useVacancyDetailQuery(id);
+  const updateMutation = useUpdateVacancyMutation(id);
 
   const { register, handleSubmit, control, setValue, watch, reset } = useForm<VacancyFormValues>({
     defaultValues: { role_title: "", culture_dimensions: "", competency_expectations: "", skills: [] },
@@ -32,24 +33,27 @@ export default function VacancyEditPage() {
   const { fields, append, remove } = useFieldArray({ control, name: "skills" });
 
   useEffect(() => {
-    vacanciesApi.get(Number(id)).then((res) => {
-      const v = res.data.vacancy;
-      reset({ role_title: v.role_title, culture_dimensions: v.culture_dimensions, competency_expectations: v.competency_expectations, skills: v.skills });
-    }).catch(() => {}).finally(() => setLoading(false));
-  }, [id, reset]);
+    if (vacancy) {
+      reset({
+        role_title: vacancy.role_title,
+        culture_dimensions: vacancy.culture_dimensions || "",
+        competency_expectations: vacancy.competency_expectations || "",
+        skills: vacancy.skills || [],
+      });
+    }
+  }, [vacancy, reset]);
 
   const onSubmit = async (data: VacancyFormValues) => {
-    setSubmitting(true);
     try {
-      await vacanciesApi.update(Number(id), {
+      await updateMutation.mutateAsync({
         role_title: data.role_title,
         culture_dimensions: data.culture_dimensions,
         competency_expectations: data.competency_expectations,
         vacancy_skills_attributes: data.skills,
       });
       navigate("/vacancies");
-    } finally {
-      setSubmitting(false);
+    } catch {
+      // Handled by react-hook-form / error states
     }
   };
 
@@ -94,7 +98,7 @@ export default function VacancyEditPage() {
         </div>
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={() => navigate("/vacancies")}>Cancel</Button>
-          <Button type="submit" disabled={submitting}>{submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Save Changes</Button>
+          <Button type="submit" disabled={updateMutation.isPending}>{updateMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Save Changes</Button>
         </div>
       </form>
 
