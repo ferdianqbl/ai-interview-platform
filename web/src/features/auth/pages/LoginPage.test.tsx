@@ -24,6 +24,56 @@ describe("LoginPage Component", () => {
   });
 
   it("shows error message when authentication fails", async () => {
+    vi.mocked(authApi.login).mockRejectedValueOnce({
+      response: {
+        status: 401,
+        data: {
+          errors: [{ status: 401, message: "Invalid email or password" }],
+        },
+      },
+    });
+
+    render(
+      <BrowserRouter>
+        <LoginPage />
+      </BrowserRouter>
+    );
+
+    fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: "wrong@example.com" } });
+    fireEvent.change(screen.getByLabelText(/Password/i), { target: { value: "wrongpass" } });
+    fireEvent.click(screen.getByRole("button", { name: /Sign in/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toBeInTheDocument();
+      expect(screen.getByText(/Invalid email or password/i)).toBeInTheDocument();
+    });
+  });
+
+  it("shows descriptive message when connection to server fails", async () => {
+    vi.mocked(authApi.login).mockRejectedValueOnce({
+      code: "ERR_NETWORK",
+      message: "Network Error",
+    });
+
+    render(
+      <BrowserRouter>
+        <LoginPage />
+      </BrowserRouter>
+    );
+
+    fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: "admin@example.com" } });
+    fireEvent.change(screen.getByLabelText(/Password/i), { target: { value: "password123" } });
+    fireEvent.click(screen.getByRole("button", { name: /Sign in/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toBeInTheDocument();
+      expect(
+        screen.getByText(/Unable to connect to the authentication server/i)
+      ).toBeInTheDocument();
+    });
+  });
+
+  it("clears error message when user modifies input", async () => {
     vi.mocked(authApi.login).mockRejectedValueOnce(new Error("Invalid credentials"));
 
     render(
@@ -37,8 +87,11 @@ describe("LoginPage Component", () => {
     fireEvent.click(screen.getByRole("button", { name: /Sign in/i }));
 
     await waitFor(() => {
-      expect(screen.getByText(/Invalid email or password/i)).toBeInTheDocument();
+      expect(screen.getByRole("alert")).toBeInTheDocument();
     });
+
+    fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: "new@example.com" } });
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("successfully signs in and saves token", async () => {
