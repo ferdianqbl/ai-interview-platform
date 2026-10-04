@@ -19,7 +19,7 @@ graph TD
 
     subgraph RoutingLayer [Centralized Router - React Router DOM v7]
         LazyRouter[Centralized Router with React.lazy Code Splitting]
-        AuthRoutes[/login, /signup]
+        AuthRoutes[/login]
         AssessmentsRoutes[/assessments, /new, /edit, /invite]
         VacanciesRoutes[/vacancies, /new, /edit]
         EvaluationRoutes[/portfolio, /fitgap, /live, /transcript]
@@ -95,7 +95,7 @@ web/
     │   │   ├── pages/                 # List, New, Edit, Invite pages
     │   │   └── services/              # assessmentsApi, skillTaxonomiesApi
     │   ├── auth/                      # Authentication & session token management
-    │   │   ├── pages/                 # LoginPage, SignupPage
+    │   │   ├── pages/                 # LoginPage
     │   │   ├── stores/                # authAtom (Jotai bearer token persistence)
     │   │   └── services/              # authApi
     │   ├── evaluation/                # Candidate skill portfolios & Fit/Gap matching

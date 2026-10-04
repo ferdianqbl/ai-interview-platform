@@ -29,16 +29,15 @@ api.interceptors.response.use(
   (error) => {
     const status = error.response?.status;
     const url = error.config?.url || "";
-    const isAuthEndpoint = url.includes("/auth/login") || url.includes("/signup");
-    const isAlreadyOnAuthPage =
-      typeof window !== "undefined" &&
-      (window.location.pathname === "/login" || window.location.pathname === "/signup");
+    const isLoginEndpoint = url.includes("/auth/login");
+    const isAlreadyOnLoginPage =
+      typeof window !== "undefined" && window.location.pathname === "/login";
 
     // Clear credentials and redirect ONLY for expired sessions on protected endpoints,
-    // NEVER on login/signup requests or when already on the auth page.
-    if ((status === 401 || status === 403) && !isAuthEndpoint) {
+    // NEVER on login requests or when already on the login page.
+    if ((status === 401 || status === 403) && !isLoginEndpoint) {
       clearToken();
-      if (!isAlreadyOnAuthPage) {
+      if (!isAlreadyOnLoginPage) {
         window.location.href = "/login";
       }
     }

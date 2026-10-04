@@ -7,7 +7,6 @@ import LoadingState from "@/components/shared/loading-state";
 
 // Lazy-loaded pages
 const LoginPage = lazy(() => import("@/features/auth/pages/LoginPage"));
-const SignupPage = lazy(() => import("@/features/auth/pages/SignupPage"));
 
 const AssessmentListPage = lazy(
   () => import("@/features/assessments/pages/AssessmentListPage")
@@ -75,14 +74,7 @@ export default function AppRoutes() {
           </PageSuspense>
         }
       />
-      <Route
-        path="/signup"
-        element={
-          <PageSuspense>
-            <SignupPage />
-          </PageSuspense>
-        }
-      />
+      <Route path="/signup" element={<Navigate to="/login" replace />} />
 
       {/* Protected Assessor Routes (with PrivateLayout: collapsible sidebar, navbar, breadcrumbs) */}
       <Route element={<ProtectedRoute />}>
