@@ -65,6 +65,34 @@ RSpec.describe 'Api::V1::Portfolios', type: :request do
       expect(json['report']['id']).to eq(report.id)
       expect(json['report']['skill_comparisons']).to be_an(Array)
     end
+
+    context 'multi-tenant isolation' do
+      let!(:other_org) { create(:organization, scheme: 'other-tenant') }
+      let!(:other_vacancy) { create(:vacancy, tenant_id: other_org.id) }
+      let!(:other_assessment) { create(:assessment, tenant_id: other_org.id) }
+      let!(:other_session) { create(:session, assessment: other_assessment, tenant_id: other_org.id) }
+      let!(:other_portfolio) { create(:portfolio, session: other_session) }
+
+      it 'returns 404 Not Found when attempting to access a vacancy belonging to another tenant' do
+        get "/api/v1/portfolios/#{portfolio.id}/fitgap/#{other_vacancy.id}", headers: headers
+        expect(response).to have_http_status(:not_found)
+
+        post "/api/v1/portfolios/#{portfolio.id}/fitgap",
+             params: { vacancy_id: other_vacancy.id }.to_json,
+             headers: headers
+        expect(response).to have_http_status(:not_found)
+
+        post "/api/v1/portfolios/#{portfolio.id}/regenerate_fitgap",
+             params: { vacancy_id: other_vacancy.id }.to_json,
+             headers: headers
+        expect(response).to have_http_status(:not_found)
+      end
+
+      it 'returns 404 Not Found when attempting to access a portfolio belonging to another tenant' do
+        get "/api/v1/portfolios/#{other_portfolio.id}/fitgap/#{vacancy.id}", headers: headers
+        expect(response).to have_http_status(:not_found)
+      end
+    end
   end
 
   describe 'GET /api/v1/portfolios/:id/export' do

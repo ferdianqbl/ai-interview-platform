@@ -61,5 +61,24 @@ RSpec.describe 'Api::V1::PortfolioSkills', type: :request do
 
       expect(response).to have_http_status(:unprocessable_entity)
     end
+
+    it 'enforces multi-tenant isolation and returns 404 for another tenant portfolio skill' do
+      other_org = create(:organization, scheme: 'other-tenant')
+      other_assessment = create(:assessment, tenant_id: other_org.id)
+      other_session = create(:session, assessment: other_assessment, tenant_id: other_org.id)
+      other_portfolio = create(:portfolio, session: other_session)
+      other_skill = create(:portfolio_skill, portfolio: other_portfolio, ai_level: 3)
+
+      post "/api/v1/portfolio_skills/#{other_skill.id}/override",
+           params: {
+             override: {
+               override_level: 4,
+               assessor_notes: 'Cross-tenant attempt'
+             }
+           }.to_json,
+           headers: headers
+
+      expect(response).to have_http_status(:not_found)
+    end
   end
 end
