@@ -102,6 +102,9 @@ export function useAudioWebSocket({
             case "session_ended":
               sessionEndedRef.current = true;
               reconnectAttemptsRef.current = RECONNECT_DELAYS.length; // suppress reconnect
+              if (msg.reason === "error") {
+                onError?.(msg.message || "The session encountered a connection error. Please retry.");
+              }
               onStateChange("complete");
               break;
             case "error":

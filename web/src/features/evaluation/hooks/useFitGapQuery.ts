@@ -24,11 +24,10 @@ export function useFitGapQuery(
         return { report: res.data.report, status: "complete" };
       } catch (err: any) {
         if (err?.response?.status === 404 || err?.response?.status === 202) {
-          // Trigger generation if not found or accepted
-          try {
-            await portfoliosApi.triggerFitGap(pId, vId);
-          } catch {
-            // Ignore trigger duplicate errors
+          // Trigger generation if not found or accepted; allow 404/422 errors (e.g. invalid/cross-tenant vacancy) to propagate
+          const triggerRes = await portfoliosApi.triggerFitGap(pId, vId);
+          if (triggerRes?.data && "report" in triggerRes.data) {
+            return { report: triggerRes.data.report, status: "complete" };
           }
           return { status: "generating" };
         }
@@ -37,8 +36,11 @@ export function useFitGapQuery(
     },
     enabled: !isNaN(pId) && pId > 0 && !isNaN(vId) && vId > 0,
     refetchInterval: (query) => {
+      if (query.state.status === "error") {
+        return false;
+      }
       const data = query.state.data;
-      if (data?.status === "generating" || !data?.report) {
+      if (data?.status === "generating") {
         return 3000;
       }
       return false;

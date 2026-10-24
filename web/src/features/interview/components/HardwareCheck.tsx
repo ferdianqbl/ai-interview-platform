@@ -346,7 +346,10 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                             variant="outline"
                             size="sm"
                             className="border-amber-500/40 text-amber-700 hover:bg-amber-50 dark:text-amber-400"
-                            onClick={onStart}
+                            onClick={() => {
+                                stopMonitoringAndTracks();
+                                onStart?.();
+                            }}
                         >
                             Proceed Anyway
                         </Button>
@@ -354,7 +357,10 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
                     <Button
                         size="sm"
                         disabled={!allPassed}
-                        onClick={onStart}
+                        onClick={() => {
+                            stopMonitoringAndTracks();
+                            onStart?.();
+                        }}
                     >
                         Start Interview
                     </Button>

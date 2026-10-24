@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +9,8 @@ import { useSessionQuery } from "../hooks/useSessionsQuery";
 import { useFitGapQuery, useRegenerateFitGapMutation } from "../hooks/useFitGapQuery";
 import { useVacancyDetailQuery } from "@/features/vacancies";
 import { portfoliosApi } from "../services/portfolios";
-import { ArrowLeft, Download, Loader2, RefreshCw, Zap, Sparkles, UserCheck } from "lucide-react";
+import { ArrowLeft, Download, Loader2, RefreshCw, Zap, Sparkles, UserCheck, AlertCircle } from "lucide-react";
+import type { AssessorOverride } from "@/types";
 
 export default function FitGapReportPage() {
   const { id, sessionId, vacancyId } = useParams<{
@@ -28,12 +29,14 @@ export default function FitGapReportPage() {
   const { data: session } = useSessionQuery(sessionId);
 
   // TanStack Query: cached vacancy details
-  const { data: vacancy } = useVacancyDetailQuery(vacancyId);
+  const { data: vacancy, isError: isVacancyError } = useVacancyDetailQuery(vacancyId);
 
   // TanStack Query: cached fit/gap report with automatic polling when generating
   const {
     data: fitgapData,
     isLoading: isFitgapLoading,
+    isError: isFitgapError,
+    error: fitgapError,
     refetch: refetchFitgap,
   } = useFitGapQuery(portfolio?.id, vacancyId);
 
@@ -41,10 +44,29 @@ export default function FitGapReportPage() {
   const regenerateMutation = useRegenerateFitGapMutation(portfolio?.id, vacancyId);
 
   const report = fitgapData?.report;
+  const hasError = isFitgapError || isVacancyError || regenerateMutation.isError;
   const isGenerating = Boolean(
-    fitgapData?.status === "generating" ||
-    (portfolio?.id && !report && isFitgapLoading)
+    !hasError &&
+      (fitgapData?.status === "generating" ||
+        (portfolio?.id && !report && isFitgapLoading))
   );
+
+  const overrides = useMemo(() => {
+    const map: Record<number, AssessorOverride> = {};
+    if (portfolio?.overrides) {
+      portfolio.overrides.forEach((o) => {
+        map[o.portfolio_skill_id] = o;
+      });
+    }
+    if (portfolio?.skills) {
+      portfolio.skills.forEach((s) => {
+        if (s.assessor_override) {
+          map[s.id] = s.assessor_override;
+        }
+      });
+    }
+    return map;
+  }, [portfolio?.overrides, portfolio?.skills]);
 
   const handleRegenerate = async () => {
     if (!portfolio) return;
@@ -183,8 +205,36 @@ export default function FitGapReportPage() {
         </div>
       )}
 
+      {/* Error State */}
+      {!isGenerating && hasError && !report && (
+        <div className="border border-destructive/30 bg-destructive/5 rounded-xl p-6 text-center space-y-3">
+          <div className="inline-flex p-3 rounded-full bg-destructive/10 text-destructive mb-1">
+            <AlertCircle className="h-6 w-6" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-base text-foreground">Unable to Load Fit/Gap Analysis</h3>
+            <p className="text-sm text-muted-foreground max-w-md mx-auto mt-1">
+              {(fitgapError as any)?.response?.data?.errors?.[0]?.message ||
+                (fitgapError as any)?.response?.data?.message ||
+                "The target vacancy could not be accessed or an upstream synthesis error occurred."}
+            </p>
+          </div>
+          <div className="flex items-center justify-center gap-2 pt-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetchFitgap()}
+              className="border-destructive/30 hover:bg-destructive/10"
+            >
+              <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+              Retry Analysis
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Not Yet Generated State */}
-      {!isGenerating && !report && (
+      {!isGenerating && !hasError && !report && (
         <div className="border rounded-xl p-12 text-center space-y-4 bg-muted/20">
           <div className="mx-auto w-12 h-12 flex items-center justify-center rounded-full bg-primary/10 text-primary">
             <Sparkles className="h-6 w-6" />
@@ -271,19 +321,30 @@ export default function FitGapReportPage() {
               </CardHeader>
               <CardContent className="p-5 pt-0">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {discoveredSkills.map((s) => (
-                    <div key={s.id} className="p-3 bg-background border rounded-lg space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold text-sm text-foreground">{s.skill_label}</span>
-                        <span className="text-xs bg-primary/10 text-primary font-semibold px-2 py-0.5 rounded">
-                          L{s.ai_level}
-                        </span>
+                  {discoveredSkills.map((s) => {
+                    const override = overrides[s.id];
+                    const effectiveLevel = override?.override_level ?? s.ai_level;
+                    return (
+                      <div key={s.id} className="p-3 bg-background border rounded-lg space-y-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-semibold text-sm text-foreground">{s.skill_label}</span>
+                          <div className="flex items-center gap-1.5">
+                            {override && (
+                              <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-medium">
+                                ✏ Adjusted
+                              </span>
+                            )}
+                            <span className="text-xs bg-primary/10 text-primary font-semibold px-2 py-0.5 rounded">
+                              L{effectiveLevel}
+                            </span>
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground line-clamp-2">
+                          {s.competency_summary}
+                        </p>
                       </div>
-                      <p className="text-xs text-muted-foreground line-clamp-2">
-                        {s.competency_summary}
-                      </p>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>

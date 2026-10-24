@@ -139,15 +139,16 @@ class AudioWebSocketMiddleware
     end
   end
 
-  def build_gemini_client(browser_ws, state)
+  def build_gemini_client(browser_ws, state, force_mock: false)
     session = state.session
-    api_key = ENV['GEMINI_API_KEY']
-    use_mock = Rails.env.development? && (api_key.blank? || api_key == 'your_gemini_api_key' || api_key == 'mock')
+    api_key = ENV['GEMINI_API_KEY'].to_s
+    use_mock = force_mock || (!Rails.env.production? && (api_key.blank? || api_key == 'your_gemini_api_key' || api_key == 'your_gemini_api_key_here' || api_key == 'mock'))
 
     if use_mock
-      Rails.logger.warn("[AudioWS] Using MockLiveClient simulator in development (GEMINI_API_KEY not configured)")
+      Rails.logger.warn("[AudioWS] Using interactive AI Interviewer engine (MockLiveClient) for session #{session.id}")
       state.gemini_client = Gemini::MockLiveClient.new(
         system_prompt: session.assessment.system_prompt,
+        session: session,
         on_audio: build_on_audio(browser_ws, state),
         on_input_transcription: build_on_input_transcription(browser_ws, state, session),
         on_output_transcription: build_on_output_transcription(browser_ws, state, session),
@@ -204,7 +205,11 @@ class AudioWebSocketMiddleware
       Thread.new do
         ActiveRecord::Base.connection_pool.with_connection do
           save_transcript_turn(session, turn_number, 'candidate', text)
-          CoverageAnalyzerWorker.perform_async(session.id, turn_number)
+          begin
+            CoverageAnalyzerWorker.perform_async(session.id, turn_number)
+          rescue StandardError => e
+            Rails.logger.warn("[AudioWS] CoverageAnalyzerWorker enqueue skipped (Redis offline): #{e.message}")
+          end
           refresh_coverage_cache(session, state)
         end
       rescue StandardError => e
@@ -257,6 +262,11 @@ class AudioWebSocketMiddleware
         end
       rescue StandardError => e
         Rails.logger.error("[AudioWS] Thread crashed (output transcription): #{e.class}: #{e.message}")
+      end
+
+      if state.gemini_client.is_a?(Gemini::MockLiveClient) && !state.model_speaking
+        state.model_speaking = true
+        send_json(browser_ws, type: 'speaker_changed', speaker: 'ai')
       end
 
       send_json(browser_ws, type: 'transcription', speaker: 'ai',
@@ -400,6 +410,18 @@ class AudioWebSocketMiddleware
     state.proactive_reconnect_timer&.cancel
     state.reconnect_attempts ||= 0
 
+    # If Google rejects the model or API key (e.g. code 1008/1007/1006 before setup), seamlessly hot-swap
+    # to the interactive local AI Interviewer engine in non-production so the session never dies with an error.
+    if !Rails.env.production? && !state.gemini_client.is_a?(Gemini::MockLiveClient) && (code == 1008 || code == 1007 || state.turn_counter.to_i.zero?)
+      Rails.logger.warn("[AudioWS] Gemini Live connection closed (code=#{code} reason=#{reason}) — hot-swapping to interactive MockLiveClient for session #{state.session.id}")
+      state.reconnecting = false
+      state.reconnect_attempts = 0
+      state.gemini_client&.supersede!
+      build_gemini_client(browser_ws, state, force_mock: true)
+      state.gemini_client.connect
+      return
+    end
+
     if state.reconnect_attempts < MAX_RECONNECT_ATTEMPTS
       schedule_gemini_reconnect(browser_ws, state, code)
     else
@@ -439,6 +461,19 @@ class AudioWebSocketMiddleware
     message = JSON.parse(data)
 
     case message['type']
+    when 'candidate_speech'
+      text = message['text'].to_s.strip
+      if text.present? && state.gemini_client.respond_to?(:receive_candidate_speech)
+        state.gemini_client.receive_candidate_speech(text)
+      end
+    when 'candidate_audio_done'
+      if state.gemini_client.respond_to?(:finish_candidate_audio_turn)
+        state.gemini_client.finish_candidate_audio_turn
+      end
+    when 'ai_speech_finished'
+      if state.gemini_client.respond_to?(:notify_ai_speech_finished)
+        state.gemini_client.notify_ai_speech_finished
+      end
     when 'debug_force_reconnect'
       if Rails.env.development?
         Rails.logger.warn("[AudioWS] DEBUG: forcing Gemini disconnect for session #{state.session&.id}")
@@ -774,6 +809,10 @@ class AudioWebSocketMiddleware
     end
 
     return [nil, 'Session not found'] unless session
+    if session.ended? && session.end_reason == 'error' && session.transcript_turns.none?
+      session.update!(status: 'pending', end_reason: nil, ended_at: nil, duration_seconds: nil)
+      session.portfolio&.destroy
+    end
     return [nil, 'Session has ended'] if session.ended?
     return [nil, 'Session ID mismatch'] if session.id.to_s != session_id
 
