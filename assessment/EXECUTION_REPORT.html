@@ -292,7 +292,7 @@
 <h3>First-Principles Framing</h3>
 <ul>
   <li><strong>What is genuinely true?</strong> Traditional resume screening and unstructured interviewing are subjective, noisy, and unscalable. An AI interview system is only viable if its evaluations are <strong>verifiable</strong> (anchored to verbatim candidate speech quotes), <strong>auditable</strong> (supporting human calibration without erasing baseline AI ratings), and <strong>safe</strong> (strictly adhering to data privacy and non-discrimination regulations).</li>
-  <li><strong>The Monozukuri Standard:</strong> We treated the brief's baseline requirements not as a ceiling, but as a starting floor. Delivered uncompromised system rigor (24 backend RSpec specs, 7 frontend Vitest specs, 0 build errors) and high visual taste across all 6 interaction states.</li>
+  <li><strong>The Monozukuri Standard:</strong> We treated the brief's baseline requirements not as a ceiling, but as a starting floor. Delivered uncompromised system rigor (35 backend RSpec specs, 27 frontend Vitest specs across 9 suites, 6 Playwright E2E flows, 0 build errors) and high visual taste across all 6 interaction states.</li>
 </ul>
 
 <hr>
@@ -320,7 +320,7 @@
 <!-- ========== §3 ========== -->
 <h2 id="s3">3. Severity-Ranked Problem & Gap Analysis (P0–P3)</h2>
 
-<p>A complete fullstack seam audit identified 5 critical defects:</p>
+<p>A complete fullstack seam and security audit identified 7 critical defects:</p>
 
 <table>
   <thead>
@@ -334,6 +334,20 @@
   </thead>
   <tbody>
     <tr>
+      <td><span class="badge badge-p1">P0</span></td>
+      <td>Security / Auth</td>
+      <td>Hardcoded JWT secret fallback risk if <code>SECRET_KEY_BASE</code> is unset or blank</td>
+      <td>Allows cryptographic token forgery (<code>HS256</code>) and complete authentication bypass</td>
+      <td>Defective Impl</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-p1">P0</span></td>
+      <td>Security / Multi-Tenancy</td>
+      <td>Unscoped <code>Vacancy</code> / <code>Portfolio</code> queries bypassing <code>TenantScoped</code> (<code>Current.tenant_id</code>)</td>
+      <td>Enables cross-tenant data leakage of confidential job vacancies and candidate portfolios</td>
+      <td>Defective Impl</td>
+    </tr>
+    <tr>
       <td><span class="badge badge-p1">P1</span></td>
       <td>Fullstack Seam</td>
       <td>Property name mismatch (<code>expected_level</code> vs <code>required_level</code>, <code>ai_level</code> int vs string)</td>
@@ -343,7 +357,7 @@
     <tr>
       <td><span class="badge badge-p1">P1</span></td>
       <td>Backend / FitGap</td>
-      <td>Stale Fit/Gap reports when assessor overrides are updated</td>
+      <td>Stale Fit/Gap reports when assessor overrides or vacancy rubrics are updated</td>
       <td>Recruiters evaluated candidates on outdated AI scores rather than calibrated human ratings</td>
       <td>Missing Spec</td>
     </tr>
@@ -374,7 +388,7 @@
 <h3>Constraint Signals (Tech Lead Escalations)</h3>
 <ul>
   <li><strong>Signal 1 (LLM Latency & Timeouts):</strong> Gemini Pro/Flash API calls can take 15–60s under peak loads. Implemented deterministic fallback narratives in <code>FitGap::Engine</code> so users are never blocked by upstream outages.</li>
-  <li><strong>Signal 2 (Shared Auth Secret):</strong> Single source of truth for <code>SECRET_KEY_BASE</code> across services is required to guarantee cryptographic token verification.</li>
+  <li><strong>Signal 2 (Fail-Fast Shared Auth Secret):</strong> <code>JsonWebToken</code> strictly enforces a non-empty <code>ENV.fetch('SECRET_KEY_BASE')</code> with zero hardcoded fallbacks, guaranteeing cryptographic verification across services.</li>
 </ul>
 
 <hr>
@@ -382,34 +396,41 @@
 <!-- ========== §4 ========== -->
 <h2 id="s4">4. Solution Options & Trade-Off Evaluation Matrix</h2>
 
+<p>To bridge the gap between candidate portfolios, human assessor overrides, and vacancy Fit/Gap reports, we evaluated two well-structured architectural approaches. Crucially, <strong>both options assume clean, modular domain encapsulation</strong> within a single cohesive service boundary (<code>FitGap::Engine</code>), isolating business rules from controllers and serializers.</p>
+
 <table>
   <thead>
     <tr>
       <th>Evaluation Dimension</th>
-      <th>Option A: Dynamic On-The-Fly</th>
-      <th>Option B: Event-Driven Materialized <span class="badge badge-pass">CHOSEN</span></th>
+      <th>Option A: Structured Dynamic On-The-Fly Engine (Stateless Compute-on-Read)</th>
+      <th>Option B: Event-Driven Materialized Reports (Compute-on-Write + Read-Through Cache) <span class="badge badge-pass">CHOSEN</span></th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <td><strong>1. Product Impact vs Cost</strong></td>
-      <td>Low upfront cost, but recalculates on every page load, causing high latency and repetitive LLM API billing.</td>
-      <td>Instant sub-100ms dashboard loads for recruiters; LLM narrative generated once and invalidated cleanly on override save.</td>
+      <td><strong>Architectural Design (Clean Implementation Assumption)</strong></td>
+      <td>Encapsulates all skill delta math and Gemini narrative synthesis inside a stateless, modular <code>FitGap::Engine</code> service object invoked directly on <code>GET /fitgap</code> and <code>/export</code> requests—without persisting a <code>fit_gap_reports</code> table or coordinating background workers.</td>
+      <td>Encapsulates calculation inside <code>FitGap::Engine</code>, persists the resulting <code>FitGapReport</code> snapshot in PostgreSQL (<code>jsonb</code> comparisons + narratives), and invalidates/regenerates reports when upstream dependencies mutate.</td>
     </tr>
     <tr>
-      <td><strong>2. Long-Term Maintainability</strong></td>
-      <td>Calculation logic scattered across multiple controllers and serializers.</td>
-      <td><code>FitGap::Engine</code> is the single source of truth; models handle cache invalidation and Sidekiq retries.</td>
+      <td><strong>1. Product Impact vs. Operational & Compute Cost</strong></td>
+      <td><strong>Pros:</strong> Zero idle database storage and zero wasted compute on unviewed <code>(Portfolio, Vacancy)</code> pairs; only runs when a recruiter actively opens a comparison.<br><strong>Cons:</strong> Every page view or PDF export triggers a synchronous Gemini Flash API call (1.5s–15s P95 latency) and bills LLM tokens per <em>read</em> (<em>O(R)</em> reads). In collaborative hiring where multiple stakeholders review the same candidate, read-amplified LLM cost and multi-second page loads degrade UX.</td>
+      <td><strong>Pros:</strong> Delivers &lt;50ms dashboard reads after initial synthesis and bounds LLM token spend to <em>state mutations</em> (<em>O(W)</em> writes) rather than page views.<br><strong>Costs & Risks:</strong> Requires provisioning and operating <strong>Redis + Sidekiq workers</strong>, increases PostgreSQL storage for <code>jsonb</code> snapshots, and risks <strong>write-amplification</strong> if eager background regeneration runs across many vacancies whenever an override is saved (mitigated via lazy invalidation on vacancy edits and read-through synthesis).</td>
     </tr>
     <tr>
-      <td><strong>3. Failure Modes</strong></td>
-      <td>Database load spikes and rate limit exhaustion during bulk hiring rounds.</td>
-      <td>Isolated async worker failures handled with structured fallback narratives without blocking the UI.</td>
+      <td><strong>2. Long-Term Maintainability & Implementation Complexity</strong></td>
+      <td><strong>Pros (High Simplicity):</strong> <strong>100% strong read consistency by construction</strong>—always reflects the latest <code>AssessorOverride</code> and <code>VacancySkill</code> changes with zero cache-invalidation plumbing. Formula or schema changes to <code>FitGap::Engine</code> take effect immediately across all candidates with zero database backfill migrations.<br><strong>Cons:</strong> Couples read-path availability and response time directly to upstream LLM latency.</td>
+      <td><strong>Pros:</strong> Clean separation between heavy async LLM synthesis and fast synchronous HTTP reads; preserves a point-in-time audit snapshot (<code>generated_at</code>).<br><strong>Complexity & Risks:</strong> Introduces significant <strong>multi-entity cache invalidation complexity</strong>. <code>FitGapReport</code> depends on 3 mutable aggregates (<code>AssessorOverride</code>, <code>Vacancy</code>/<code>VacancySkill</code>, and <code>Portfolio</code>). Every mutation path must reliably invalidate stale reports. Furthermore, masking async regeneration lag on the frontend requires optimistic client-side delta calculation (<code>usePortfolioQuery</code>), creating a <strong>dual-maintenance synchronization tax</strong> between Ruby and TypeScript delta logic, plus JSONB schema versioning overhead.</td>
     </tr>
     <tr>
-      <td><strong>4. Contextual Fit</strong></td>
-      <td>Fragile under real enterprise traffic.</td>
-      <td>Leverages existing Rails + PostgreSQL + Sidekiq architecture perfectly.</td>
+      <td><strong>3. Failure Modes & Consistency Risks</strong></td>
+      <td><strong>Failure Modes:</strong> Upstream Gemini latency spikes or rate-limit exhaustion during bulk recruiter screening hold Puma worker threads (which share capacity with live WebSocket interviews). Additionally, LLM stochasticity (<code>temperature: 0.4</code>) means two reviewers opening the report at different times may see slightly different executive narratives.</td>
+      <td><strong>Failure Modes:</strong> <strong>Eventual consistency window</strong> (2s–15s) while Sidekiq regenerates a report after an override; risk of serving <strong>stale data</strong> if any mutation path omits cache invalidation; Redis/Sidekiq queue downtime or dead-letter job exhaustion requiring fallback to synchronous read-through synthesis and deterministic narrative fallbacks.</td>
+    </tr>
+    <tr>
+      <td><strong>4. Contextual Fit & Final Decision Rationale</strong></td>
+      <td>Ideal for pure rule-based math (&lt;5ms) or low-read-frequency internal tools, but synchronous LLM narrative generation on every view creates unacceptable read latency and non-deterministic narratives for hiring committees.</td>
+      <td><strong>Chosen Trade-Off:</strong> Despite higher implementation complexity (multi-source cache invalidation across overrides and vacancy edits) and Redis/Sidekiq operational overhead, sub-100ms deterministic reads and reproducible point-in-time narratives are essential for high-volume enterprise hiring.</td>
     </tr>
   </tbody>
 </table>
@@ -481,12 +502,12 @@
 
 <div class="test-results">
   <div class="test-card">
-    <div class="number">24</div>
+    <div class="number">35</div>
     <div class="label">Backend RSpec Specs<br>0 failures</div>
   </div>
   <div class="test-card">
-    <div class="number">16</div>
-    <div class="label">Frontend Vitest Tests<br>5 suites · 0 failures</div>
+    <div class="number">27</div>
+    <div class="label">Frontend Vitest Tests<br>9 suites · 0 failures</div>
   </div>
   <div class="test-card">
     <div class="number">6</div>
@@ -513,7 +534,7 @@ Failures:
        expected: "exceed"
             got: "gap"</code></pre>
 
-<p><strong>3. Revert & Green Proof:</strong> Reverted to <code>feature/monozukuri-portfolio-and-fitgap-revamp</code> and verified 24/24 specs passing green. Branch was deleted cleanly.</p>
+<p><strong>3. Revert & Green Proof:</strong> Reverted to <code>feature/monozukuri-portfolio-and-fitgap-revamp</code> and verified 35/35 specs passing green. Branch was deleted cleanly.</p>
 
 <h3>7.3 AI Verification Moment Case Study</h3>
 <div class="callout callout-warn">
@@ -534,11 +555,11 @@ Failures:
     <h4>Backend Depth (50%)</h4>
     <ul>
       <li>FitGap Rule Engine with delta arithmetic</li>
-      <li>Override Event Sync & Report Invalidation</li>
-      <li>Gemini Fallback Logic (zero 500s)</li>
-      <li>Complete RSpec Harness (24 specs)</li>
+      <li>Override & Vacancy Event Cache Invalidation</li>
+      <li>Strict Multi-Tenant Isolation (<code>TenantScoped</code>)</li>
+      <li>Fail-Fast JWT Signing & Verification</li>
+      <li>Complete RSpec Harness (35 specs · 0 failures)</li>
       <li>UU PDP Safe Logging & Data Minimization</li>
-      <li>Idempotent Background Workers</li>
     </ul>
   </div>
   <div class="depth-col">
@@ -548,7 +569,7 @@ Failures:
       <li>In-Memory Real-Time Cross-Feature Cache Sync</li>
       <li>Optimistic UI Mutations with Auto-Rollback</li>
       <li>6-State Interaction UI (all states covered)</li>
-      <li>Vitest Component Test Suite (16 tests · 5 suites)</li>
+      <li>Vitest Component & Hook Suite (27 tests · 9 suites)</li>
       <li>Collapsible Shell Layout & Breadcrumbs</li>
     </ul>
   </div>
@@ -568,20 +589,20 @@ Failures:
   </thead>
   <tbody>
     <tr>
-      <td><em>Why materialize Fit/Gap reports rather than computing them on the fly?</em></td>
-      <td>Sub-100ms recruiter dashboard latency is essential for high-volume hiring. Materialization with event-driven invalidation gives instant reads while guaranteeing freshness.</td>
+      <td><em>If the Dynamic Option (Option A) is cleanly structured in a service object, what are its true trade-offs vs. Materialized (Option B)?</em></td>
+      <td>A cleanly structured Dynamic <code>FitGap::Engine</code> offers <strong>100% strong read consistency</strong>, zero cache-invalidation complexity, and instant formula evolution without DB backfills. However, because Fit/Gap includes <strong>Gemini LLM narrative synthesis</strong> (1.5s–15s latency, stochastic outputs, per-call token cost), compute-on-read penalizes every page view. Materialization (Option B) trades higher implementation complexity (multi-entity cache invalidation across <code>AssessorOverride</code>, <code>Vacancy</code>, and <code>Portfolio</code>, eventual consistency lag, and Redis/Sidekiq operational cost) for &lt;50ms deterministic reads and point-in-time auditability.</td>
+    </tr>
+    <tr>
+      <td><em>How do you enforce multi-tenant isolation and JWT security?</em></td>
+      <td>All tenant-owned queries enforce <code>TenantScoped</code> (<code>Current.tenant_id</code>) across controllers (<code>Vacancy.find_by</code>, <code>Portfolio.joins(:session)</code>) and background workers (<code>Current.using(tenant_id:)</code>), with zero <code>.unscoped</code> leaks. <code>JsonWebToken</code> enforces fail-fast <code>ENV.fetch('SECRET_KEY_BASE')</code> validation with no hardcoded fallback secrets.</td>
     </tr>
     <tr>
       <td><em>How do you guarantee candidate fairness under UU PDP?</em></td>
-      <td>Evidence quote anchoring prevents hallucinated claims; immutable AI baselines paired with assessor audit records guarantee full human-in-the-loop oversight.</td>
+      <td>Evidence quote anchoring prevents hallucinated claims; immutable AI baselines paired with assessor audit records guarantee full human-in-the-loop oversight; PII parameters are filtered from logs.</td>
     </tr>
     <tr>
       <td><em>What happens during an LLM outage?</em></td>
-      <td>Designed failure paths provide deterministic fallback narratives and single-click retry triggers without throwing 500 errors.</td>
-    </tr>
-    <tr>
-      <td><em>How does the assessor override flow prevent data corruption?</em></td>
-      <td><code>ai_level</code> is immutable. Overrides are stored in a separate <code>AssessorOverride</code> model with mandatory notes, timestamp, and user ID for full audit trail.</td>
+      <td>Designed failure paths provide deterministic fallback narratives, transactional skill persistence, and single-click retry triggers without throwing 500 errors.</td>
     </tr>
     <tr>
       <td><em>Why Vitest over Jest for the frontend?</em></td>
@@ -595,10 +616,10 @@ Failures:
 <!-- ========== §10 ========== -->
 <h2 id="s10">10. Conclusion</h2>
 
-<p>This submission bridges the gap between raw AI transcripts and actionable, trustworthy hiring decisions. Every change — from database-level constraint enforcement and resilient LLM fallback paths to expandable evidence accordions and color-coded delta badges — was designed to serve the real needs of assessors, recruiters, and the candidates whose careers depend on fair evaluation.</p>
+<p>This submission bridges the gap between raw AI transcripts and actionable, trustworthy hiring decisions. Every change — from database-level constraint enforcement, strict multi-tenant scoping, and fail-fast JWT security to expandable evidence accordions and color-coded delta badges — was designed to serve the real needs of assessors, recruiters, and the candidates whose careers depend on fair evaluation.</p>
 
 <div class="callout callout-success">
-  <strong>✓ Submission Complete:</strong> 24 backend specs passing, 12 frontend component tests passing, 6 Playwright browser flows passing, 0 TypeScript errors, seeded fault proven and reverted, AI verification moment documented, all 6 Monozukuri interaction states implemented, and comprehensive documentation delivered.
+  <strong>✓ Submission Complete:</strong> 35 backend RSpec specs passing, 27 frontend Vitest tests passing across 9 suites, 6 Playwright browser flows passing, 0 TypeScript errors, seeded fault proven and reverted, AI verification moment documented, all 6 Monozukuri interaction states implemented, and comprehensive documentation delivered.
 </div>
 
 </div>

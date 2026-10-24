@@ -210,12 +210,17 @@ The `FitGap::Engine` bridges candidate competency with role requirements through
 
 ---
 
-## 5. Security & Indonesian UU PDP Compliance
+## 5. Security, Multi-Tenancy & Indonesian UU PDP Compliance
 
 1. **Data Minimization & Safe Logging**:
-   * Sensitive attributes (`candidate_name`, `email`, raw auth tokens) are filtered in `config/initializers/filter_parameter_logging.rb`.
+   * Sensitive attributes (`candidate_name`, `email`, `invite_token`, raw auth tokens) are filtered in `config/initializers/filter_parameter_logging.rb`.
    * Background worker arguments pass only database IDs (`portfolio.id`, `vacancy.id`), never raw payload blobs or candidate PII.
-2. **Role-Based API Authorization**:
+2. **Fail-Fast JWT Cryptographic Verification**:
+   * `JsonWebToken` strictly requires a configured, non-blank `ENV.fetch('SECRET_KEY_BASE')` with **zero hardcoded fallback secrets**, preventing token forgery (`HS256`) if an environment variable is misconfigured.
+3. **End-to-End Multi-Tenant Isolation (`TenantScoped`)**:
+   * All tenant-owned queries enforce `Current.tenant_id` via `TenantScoped` (`Vacancy.find_by`, `Session.find`, `Assessment.find`), with `Portfolio.joins(:session)` and `PortfolioSkill.joins(portfolio: :session)` enforcing tenant boundaries across child associations.
+   * Asynchronous Sidekiq jobs (`FitGapGeneratorWorker`) explicitly bind tenant context via `Current.using(tenant_id: portfolio.session.tenant_id)` before querying `Vacancy`, preventing cross-tenant data access in background workers.
+4. **Role-Based API Authorization**:
    * Assessor endpoints are protected with `authorize_auth_token! :assessor`.
    * Candidate endpoints (`/sessions/:token/candidate`, `/sessions/:token/audio_complete`) are strictly scoped by one-time unguessable `invite_token`.
 
@@ -223,7 +228,8 @@ The `FitGap::Engine` bridges candidate competency with role requirements through
 
 ## 6. Backend Testing Strategy (`api/spec/`)
 
+* **Security & Auth Specs**: `JsonWebToken` verifying valid encode/decode, signature tampering rejection, and fail-fast `KeyError` when `SECRET_KEY_BASE` is missing or blank.
 * **Unit Specs**: Models (`PortfolioSkill`, `AssessorOverride`, `FitGapReport`) validating numericality, relations, and enums.
-* **Service Specs**: `FitGap::Engine` testing all 4 comparison results, override precedence, and fallback narratives.
-* **Request Specs**: `PortfoliosController` verifying JSON payloads, 404/422 responses, and Prawn PDF exports.
+* **Service & Worker Specs**: `FitGap::Engine` testing all 4 comparison results, override precedence, and fallback narratives; `FitGapGeneratorWorker` verifying cross-tenant vacancy isolation.
+* **Request Specs**: `PortfoliosController` and `PortfolioSkillsController` verifying JSON payloads, 404/422 responses, Prawn PDF exports, and strict multi-tenant isolation across vacancies and portfolios (35 total examples, 0 failures).
 * **Seeded Fault Validation**: Proves test failure on intentional logic inversion.

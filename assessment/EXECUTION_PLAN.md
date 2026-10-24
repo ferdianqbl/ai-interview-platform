@@ -99,12 +99,14 @@ Document all discovered defects into a structured matrix:
 
 #### 3.1 Solution Option Evaluation & Trade-off Matrix
 
-| Evaluation Dimension | Option A: Dynamic On-The-Fly Calculation | Option B: Event-Driven Materialized Reports (Chosen) |
+Both options assume clean, modular domain encapsulation within `FitGap::Engine`:
+
+| Evaluation Dimension | Option A: Structured Dynamic On-The-Fly Engine (Stateless Compute-on-Read) | Option B: Event-Driven Materialized Reports (Compute-on-Write + Read-Through Cache) (Chosen) |
 |---|---|---|
-| **Product Impact vs. Cost** | Low cost, but recalculates on every read, slowing down recruiter dashboards. | High impact: immediate sub-100ms response time for recruiters; report regenerated via Sidekiq/sync trigger on override save. |
-| **Long-Term Maintainability** | Simple logic, but scatters recalculation triggers across controllers. | Clean separation: `FitGap::Engine` acts as single source of truth; models handle cache invalidation. |
-| **Failure Modes** | Database load spikes during peak hiring seasons. | Handled gracefully with fallback narratives if Gemini is unavailable. |
-| **Contextual Fit** | Functional for small loads, fails at scale. | **Optimal fit**: Scalable, audit-friendly, fits existing Rails + Sidekiq architecture. |
+| **Product Impact vs. Operational Cost** | **Pros:** Zero idle DB storage or wasted background compute.<br>**Cons:** Every view triggers a synchronous Gemini Flash call ($1.5\text{ s}–15\text{ s}$ latency) and bills LLM tokens per read ($O(R)$ reads). | **Pros:** Immediate $<50\text{ ms}$ dashboard loads for recruiters; LLM token cost bounded to state writes ($O(W)$ writes).<br>**Costs & Risks:** Requires operating Redis + Sidekiq workers, PostgreSQL JSONB storage overhead, and managing write-amplification across vacancies. |
+| **Long-Term Maintainability & Complexity** | **Pros:** 100% strong read consistency by construction; zero cache-invalidation code; instant formula evolution without DB backfills.<br>**Cons:** Couples read availability to upstream LLM latency. | **Pros:** Decouples heavy LLM calls from HTTP read path; preserves point-in-time audit snapshots.<br>**Complexity:** Multi-entity cache invalidation across `AssessorOverride`, `Vacancy`, and `Portfolio`; client/server dual-maintenance tax for optimistic UI delta calculation; JSONB schema versioning. |
+| **Failure Modes** | Upstream LLM latency holds Puma threads; stochastic narrative drift across page reloads. | Eventual consistency lag ($2\text{ s}–15\text{ s}$) during async worker execution; risk of stale data if a mutation hook is missed; handled with read-through synthesis and deterministic fallback narratives. |
+| **Contextual Fit** | Optimal for pure rule-based calculations, but synchronous LLM generation per view degrades committee review UX. | **Chosen Trade-Off**: Sub-100ms deterministic reads and point-in-time auditability justify the cache-invalidation and Sidekiq operational complexity. |
 
 #### 3.2 Backend Code Modifications
 1. **`app/services/fit_gap/engine.rb`**:
