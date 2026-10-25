@@ -11,7 +11,7 @@ vi.mock("../services/auth", () => ({
 }));
 
 describe("LoginPage Component", () => {
-  it("renders email and password inputs and sign-in button", () => {
+  it("renders email and password inputs, sign-in button, and quick-fill demo account buttons", () => {
     render(
       <BrowserRouter>
         <LoginPage />
@@ -21,6 +21,27 @@ describe("LoginPage Component", () => {
     expect(screen.getByLabelText(/Email/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Password/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Sign in/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Fill Test Corp/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Fill Acme Corp/i })).toBeInTheDocument();
+  });
+
+  it("autofills credentials when clicking Test Corp or Acme Corp quick-fill buttons", () => {
+    render(
+      <BrowserRouter>
+        <LoginPage />
+      </BrowserRouter>
+    );
+
+    const emailInput = screen.getByLabelText(/Email/i) as HTMLInputElement;
+    const passwordInput = screen.getByLabelText(/Password/i) as HTMLInputElement;
+
+    fireEvent.click(screen.getByRole("button", { name: /Fill Test Corp/i }));
+    expect(emailInput.value).toBe("admin@example.com");
+    expect(passwordInput.value).toBe("password123");
+
+    fireEvent.click(screen.getByRole("button", { name: /Fill Acme Corp/i }));
+    expect(emailInput.value).toBe("admin@acme.com");
+    expect(passwordInput.value).toBe("password123");
   });
 
   it("shows error message when authentication fails", async () => {
@@ -105,8 +126,7 @@ describe("LoginPage Component", () => {
       </BrowserRouter>
     );
 
-    fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: "admin@example.com" } });
-    fireEvent.change(screen.getByLabelText(/Password/i), { target: { value: "password123" } });
+    fireEvent.click(screen.getByRole("button", { name: /Fill Test Corp/i }));
     fireEvent.click(screen.getByRole("button", { name: /Sign in/i }));
 
     await waitFor(() => {
