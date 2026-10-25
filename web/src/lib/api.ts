@@ -1,5 +1,7 @@
 import axios from "axios";
 import { getStoredToken, clearToken } from "@/stores/authAtom";
+import { clearTenant } from "@/stores/tenantAtom";
+import { queryClient } from "@/lib/queryClient";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3001/api/v1";
 const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL ?? "ws://localhost:3001";
@@ -37,6 +39,8 @@ api.interceptors.response.use(
     // NEVER on login requests or when already on the login page.
     if ((status === 401 || status === 403) && !isLoginEndpoint) {
       clearToken();
+      clearTenant();
+      queryClient.clear();
       if (!isAlreadyOnLoginPage) {
         window.location.href = "/login";
       }
