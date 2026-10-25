@@ -8,20 +8,20 @@
 ---
 
 ## Table of Contents
-1. [Executive Summary & Step-by-Step Execution Narrative](#1-executive-summary--step-by-step-execution-narrative)
-2. [Product Context Analysis & Indonesian UU PDP Law Compliance](#2-product-context-analysis--indonesian-uu-pdp-law-compliance)
+1. [Executive Summary & Step-by-Step Execution Journey Narrative](#1-executive-summary--step-by-step-execution-journey-narrative)
+2. [Product Context Analysis (Users, Candidates & UU PDP Implications)](#2-product-context-analysis-users-candidates--uu-pdp-implications)
 3. [Severity-Ranked Problem & Gap Analysis (P0 to P3) + Constraint Signals](#3-severity-ranked-problem--gap-analysis-p0-to-p3--constraint-signals)
 4. [Option Evaluation & Trade-Off Matrix (Option A vs Option B Rationale)](#4-option-evaluation--trade-off-matrix-option-a-vs-option-b-rationale)
 5. [Self-Derived Acceptance Criteria & Edge Cases Handled](#5-self-derived-acceptance-criteria--edge-cases-handled)
-6. [Visual Screenshots & UI Implementation](#6-visual-screenshots--ui-implementation)
+6. [Visual Screenshots (UI Flows, Edge Cases, Error States & Responsive Views)](#6-visual-screenshots-ui-flows-edge-cases-error-states--responsive-views)
 7. [Test Coverage Evidence, Seeded Fault Test Proof & AI Verification Notes](#7-test-coverage-evidence-seeded-fault-test-proof--ai-verification-notes)
-8. [Claimed Engineering Depth (Backend vs. Frontend)](#8-claimed-engineering-depth-backend-vs-frontend)
+8. [Claimed Engineering Depth (Backend-Heavy vs. Frontend-Heavy)](#8-claimed-engineering-depth-backend-heavy-vs-frontend-heavy)
 9. [Technical Reviewer Revision Responses (Post-Submission Audit & Resolution)](#9-technical-reviewer-revision-responses-post-submission-audit--resolution)
 10. [Conclusion & Final Submission Checklist](#10-conclusion--final-submission-checklist)
 
 ---
 
-## 1. Executive Summary & Step-by-Step Execution Narrative
+## 1. Executive Summary & Step-by-Step Execution Journey Narrative
 
 This project represents a comprehensive, production-grade revamp of the **AI Interview Platform**, focusing on the critical high-leverage seam between automated conversational assessment, structured competency synthesis, human assessor calibration, and vacancy Fit/Gap evaluation.
 
@@ -44,7 +44,7 @@ In accordance with **Step 6: Final Submission** of [`brief-fullstack.pdf`](file:
 
 ---
 
-## 2. Product Context Analysis & Indonesian UU PDP Law Compliance
+## 2. Product Context Analysis (Users, Candidates & UU PDP Implications)
 
 ### The 5 Domain Pillars
 1. **The Product**: A fullstack AI talent assessment platform (`api/` Rails 7 + PostgreSQL + Sidekiq + Gemini AI; `web/` React 18 + TypeScript + Tailwind SPA) that conducts conversational voice interviews, synthesizes competency portfolios (`Portfolio` & `PortfolioSkill`) anchored to verbatim transcript quotes, enables human score calibration (`AssessorOverride`), and generates role-specific Fit/Gap evaluations (`FitGapReport`).
@@ -110,7 +110,7 @@ Before writing code, we defined explicit acceptance criteria covering every inpu
 
 ---
 
-## 6. Visual Screenshots & UI Implementation
+## 6. Visual Screenshots (UI Flows, Edge Cases, Error States & Responsive Views)
 
 Below are high-fidelity captures of the shipped interface illustrating candidate skill portfolios, human assessor override calibration, role fit/gap analysis, transcript evidence, and vacancy rubric configuration:
 
@@ -162,7 +162,7 @@ To prove the test harness is active, reliable, and capable of catching subtle re
 
 ---
 
-## 8. Claimed Engineering Depth (Backend vs. Frontend)
+## 8. Claimed Engineering Depth (Backend-Heavy vs. Frontend-Heavy)
 
 ```
 ┌────────────────────────────────────────────────────────┐
