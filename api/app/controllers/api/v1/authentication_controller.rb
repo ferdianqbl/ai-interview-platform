@@ -23,7 +23,11 @@ module Api
 
         token = JsonWebToken.encode({ user_id: user.id, role: user.role, scheme: organization.scheme })
 
-        json_response({ token:, user: { id: user.id, email: user.email, role: user.role, scheme: organization.scheme } })
+        json_response({
+          token:,
+          user: { id: user.id, email: user.email, role: user.role, scheme: organization.scheme },
+          tenant: { id: organization.scheme, name: organization.name }
+        })
       end
 
       private
