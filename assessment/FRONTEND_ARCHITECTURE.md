@@ -230,13 +230,54 @@ stateDiagram-v2
 | Vacancy Level Key | `expected_level: 3` | `c.required_level` | Standardized on `expected_level` across TypeScript types, serializers, and React components. |
 | Override Flag | `overridden: true` / `override` object | `c.is_override` | Added `is_override: boolean` to comparison payload mapping and badge renderer. |
 | Export Payload | Binary PDF / Structured JSON | Blind blob instantiation | Added proper MIME type headers (`application/pdf`, `application/json`) and automatic blob URL revocation. |
+| Fit/Gap Missing State | HTTP 404 / 422 error | Blind retry / infinite generating loop | Added explicit error propagation in `useFitGapQuery.ts` and actionable Error State banner with retry actions in `FitGapReportPage.tsx`. |
+| Discovered Competencies | `ai_level` int | Raw `L{ai_level}` | Resolved effective override level (`override?.override_level ?? s.ai_level`) on discovered competency cards. |
 
 ---
 
-## 7. Frontend Testing Architecture (`web/src/`)
+## 7. Real-Time AI Voice Interview Architecture (`web/src/features/interview/`)
 
-Using **Vitest** and **React Testing Library**: **16 tests, 5 suites, 0 failures**.
+To solve the candidate voice streaming failure, eliminate browser dictation conflicts, and create a responsive audio experience:
 
+```
+[ Candidate Microphone ]
+          │ (Single WebAudio MediaStreamTrack)
+          ▼
+┌────────────────────────────────────────────────────────┐
+│ AudioContext (16kHz) + useAudioCapture Hook            │
+│ • Int16 PCM AudioWorklet streaming                     │
+│ • Real-time RMS amplitude calculation (micLevel 0-100) │
+│ • 1.75s silence detection (onSpeechEnd callback)       │
+└────────────────────────────────────────────────────────┘
+          │
+          ├───► WebSocket: Binary 16kHz PCM Frames ──────► Backend AudioWebSocketMiddleware
+          │                                                (MockLiveClient VAD + Gemini v1beta)
+          │
+          └───► React UI State: micLevel (0-100) ────────► VoiceBars.tsx
+                                                           (Emerald green dynamic bouncing bars)
+```
+
+1. **Elimination of macOS `"duk duk"` Dictation Chime**:
+   * Removed legacy `webkitSpeechRecognition` from `InterviewPage.tsx`. On macOS Chrome, invoking speech recognition while an active `AudioContext(16000)` holds the microphone triggers the OS dictation start chime (`"duk"`) and immediate cancellation abort (`"duk"`).
+   * All candidate speech is captured solely via the single 16kHz PCM `AudioWorklet` stream.
+2. **Dynamic Emerald Voice Activity Bars (`VoiceBars.tsx`)**:
+   * Previously, candidates saw a static pale-gray bar with no visual indication of microphone activity.
+   * Replaced with vivid emerald-green voice bars that scale dynamically with the candidate's real-time voice volume (`micLevel: 0–100`), providing immediate visual confirmation that their voice is being heard.
+3. **Turn Detection & Instant "Done Speaking" Control**:
+   * Features both automated silence detection (1.75s threshold) and a prominent **"Done Speaking — Send Answer"** button, allowing candidates to immediately send their answers without waiting out silence pauses.
+4. **Preflight Hardware Check Acceleration (`internetSpeedTest.ts`)**:
+   * Enforced 1.5s `AbortController` timeouts with local `/health` ping fallback probes, ensuring all 4 preflight hardware checks (Microphone, Camera, Network Latency, Bandwidth) complete in $<3\text{ seconds}$.
+
+---
+
+## 8. Frontend Testing Architecture (`web/src/`)
+
+Using **Vitest** and **React Testing Library**: **27 tests across 9 test suites, 0 failures**.
+
+* **`useFitGapQuery.test.tsx` (3 tests)**:
+  - Validates `404` and `422` error propagation without infinite polling.
+  - Validates polling behavior when status is actively `generating`.
+  - Validates successful Fit/Gap report caching.
 * **`usePortfolioQuery.test.tsx` (4 tests)**:
   - Validates fetching and caching of portfolio data.
   - Validates optimistic UI update on score override prior to server response.
@@ -251,10 +292,21 @@ Using **Vitest** and **React Testing Library**: **16 tests, 5 suites, 0 failures
   - Validates effective level vs. overridden level rendering.
   - Validates confidence badge rendering.
   - Validates quote evidence accordion interactions.
-* **`LoginPage.test.tsx` (3 tests)**:
+* **`LoginPage.test.tsx` (5 tests)**:
   - Validates input fields and authentication submission.
   - Validates error message display on auth failure.
   - Validates token storage and redirection.
+  - Validates accessible error banners.
 * **`AssessmentListPage.test.tsx` (2 tests)**:
   - Validates rendering list of assessments.
   - Validates empty state rendering when zero assessments exist.
+* **`navbar.test.tsx` (3 tests)**:
+  - Validates route breadcrumbs navigation.
+  - Validates theme toggle (Dark/Light).
+  - Validates responsive mobile menu trigger.
+* **`api.test.ts` (2 tests)**:
+  - Validates automated `Bearer` JWT token header injection.
+  - Validates token clearance and redirection on expired `401` responses without login loops.
+* **`internetSpeedTest.test.ts` (2 tests)**:
+  - Validates realistic thresholds for real-time 16kHz PCM voice streaming.
+  - Validates candidate connection evaluation with latency, download, and upload assertions.

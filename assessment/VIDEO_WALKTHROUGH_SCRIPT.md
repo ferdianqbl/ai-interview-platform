@@ -51,10 +51,11 @@
 ---
 
 ### [3:15 – 4:00] Section 4: Engineering Rigor, Test Harness & Seeded Fault
-* **Visual:** Terminal split screen showing RSpec passing 24/24 and Vitest passing 7/7.
+* **Visual:** Terminal split screen showing RSpec passing 35/35 and Vitest passing 27/27.
 * **Script:**
   > "Moving under the hood to engineering rigor:
-  > - When I inherited the codebase, there were zero specs. I established the complete test harness: **24 RSpec tests** covering models, services, and request controllers in Rails, and **7 Vitest component tests** in React.
+  > - When I inherited the codebase, there were zero tests. I established a fullstack test harness: **35 RSpec specs** covering models, services, workers, and request controllers in Rails (including fail-fast JWT cryptographic validation and multi-tenant isolation via `Current.using`), alongside **27 Vitest tests across 9 suites** and **6 Playwright E2E browser flows** in React.
+  > - I also completely stabilized the **Candidate AI Voice Interview experience**—eliminating macOS dictation audio collisions, streaming 16kHz PCM audio via WebAudio with live emerald RMS volume bars, and transcribing via Gemini `v1beta` with automated model fallbacks.
   > - To prove our tests are real, I performed a **Seeded Fault Test**: on a scratch branch, I inverted the delta calculation in `FitGap::Engine`. The test harness immediately caught the regression with an explicit failure.
   > - I also documented an **AI Verification Moment**: when AI tooling suggested destructively overwriting the AI score column, I intervened and enforced a dedicated `AssessorOverride` model to maintain regulatory compliance."
 

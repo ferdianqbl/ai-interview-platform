@@ -76,10 +76,11 @@ To bridge the gap between candidate portfolios, human assessor overrides, and va
 3. **LLM Failure Resilience**: If Gemini Flash fails or times out, `FitGap::Engine` returns deterministic, structured fallback narratives (HTTP 200/202, zero 500s).
 4. **Strict Level Clamping**: Database constraints and model validations enforce $1 \le \text{level} \le 5$.
 5. **Responsive & Accessible UI**: Full layout responsiveness across 375px (mobile), 768px (tablet), and 1440px (desktop) with expandable quote accordions.
+6. **Fail-Fast Security & Multi-Tenancy**: `JsonWebToken` fails fast on missing secret (`KeyError`); queries strictly enforce tenant scoping without `.unscoped` leaks.
 
 ---
 
-## 5. UI Implementation & Visual Evidence
+## 6. UI Implementation & Visual Evidence
 
 | View | Screenshot Preview & Description |
 |---|---|
@@ -91,15 +92,15 @@ To bridge the gap between candidate portfolios, human assessor overrides, and va
 
 ---
 
-## 6. Monozukuri Engineering Rigor & Test Verification
+## 7. Monozukuri Engineering Rigor & Test Verification
 
-### 6.1 Test Suite Summary
+### 7.1 Test Suite Summary
 * **Backend (`api/` RSpec Suite)**: **35 examples, 0 failures** (`JsonWebToken` fail-fast security specs, `PortfolioSkill`, `AssessorOverride`, `FitGapReport`, `FitGap::Engine`, `FitGapGeneratorWorker` tenant isolation, `PortfoliosController`, and `PortfolioSkillsController` cross-tenant specs).
 * **Frontend Unit & Component (`web/` Vitest Suite)**: **27 tests, 0 failures** across 9 test suites (`LoginPage`, `AssessmentListPage`, `SkillPortfolioCard`, `ComparisonTable`, `navbar`, `api`, `internetSpeedTest`, `usePortfolioQuery`, and `useFitGapQuery` testing optimistic mutations, cache rollback, cross-tenant 404 propagation, and real-time cross-feature in-memory recalculation).
 * **Frontend End-to-End (`web/` Playwright Suite)**: **6 browser flows, 0 failures** (Auth, Candidate Invites, Portfolio, Vacancies, Fit/Gap Synthesis, Candidate Interview).
 * **Production Build (`tsc && vite build`)**: **100% clean**, 0 TypeScript errors, optimized vendor chunks.
 
-### 6.2 Seeded Fault Test Proof
+### 7.2 Seeded Fault Test Proof
 To prove the test harness is active, reliable, and capable of catching subtle regressions:
 
 1. **Injected Defect on Scratch Branch `fault/seeded-delta-bug`**:
@@ -118,14 +119,14 @@ To prove the test harness is active, reliable, and capable of catching subtle re
    ```
 3. **Revert & Green Proof**: Reverted to `feature/monozukuri-portfolio-and-fitgap-revamp` and verified 35/35 specs passing green.
 
-### 6.3 AI Verification Moment Case Study
+### 7.3 AI Verification Moment Case Study
 * **Flawed AI Generation**: During scaffolding, AI code generation proposed updating the `ai_level` column directly on `portfolio_skills` when an assessor saved a score override.
 * **Risk Identified**: This destructive write permanently destroyed the baseline AI score, making algorithmic auditing impossible and violating **UU PDP human oversight governance**.
 * **Engineered Fix**: Implemented a dedicated `AssessorOverride` model preserving immutable `ai_level`, tracking `overridden_by`, `overridden_at`, and mandatory `assessor_notes`.
 
 ---
 
-## 7. Claimed Engineering Depth
+## 8. Claimed Engineering Depth
 
 ```
 ┌────────────────────────────────────────────────────────┐
@@ -143,7 +144,7 @@ To prove the test harness is active, reliable, and capable of catching subtle re
 
 ---
 
-## 8. Live Technical Defense Strategy (CTO & Tech Lead)
+## 9. Live Technical Defense Strategy (CTO & Tech Lead)
 
 | Anticipated Question | Architectural Rationale & Defense |
 |---|---|
@@ -154,5 +155,5 @@ To prove the test harness is active, reliable, and capable of catching subtle re
 
 ---
 
-## 9. Conclusion
+## 10. Conclusion
 This submission bridges the gap between raw AI transcripts and actionable, trustworthy hiring decisions, embodying the true standard of a Fullstack Product Engineer.
