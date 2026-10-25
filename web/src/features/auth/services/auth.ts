@@ -5,8 +5,22 @@ export interface LoginPayload {
   password: string;
 }
 
+export interface UserSummary {
+  id: number | string;
+  email: string;
+  role: string;
+  scheme: string;
+}
+
+export interface TenantSummary {
+  id: string;
+  name: string;
+}
+
 export interface LoginResponse {
   token: string;
+  user?: UserSummary;
+  tenant?: TenantSummary;
 }
 
 export const authApi = {
