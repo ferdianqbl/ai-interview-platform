@@ -189,8 +189,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_08_15_000002) do
     t.string "role", limit: 20, default: "user", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.string "scheme", default: "test-corp", null: false
+    t.string "scheme"
     t.index ["email"], name: "idx_ai_interview_users_email", unique: true
+    t.index ["scheme"], name: "index_users_on_scheme"
   end
 
   create_table "vacancies", force: :cascade do |t|

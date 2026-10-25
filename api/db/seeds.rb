@@ -91,14 +91,14 @@ end
 admin1 = User.find_or_initialize_by(email: "admin@example.com")
 admin1.password = "password123"
 admin1.role = "admin"
-admin1.scheme = "test-corp" if admin1.respond_to?(:scheme=)
+admin1.scheme = "test-corp"
 admin1.save!
 puts "  [Tenant 1 - Test Corp] Admin ready: email=admin@example.com password=password123 (scheme=test-corp)"
 
 admin2 = User.find_or_initialize_by(email: "admin@acme.com")
 admin2.password = "password123"
 admin2.role = "admin"
-admin2.scheme = "acme-corp" if admin2.respond_to?(:scheme=)
+admin2.scheme = "acme-corp"
 admin2.save!
 puts "  [Tenant 2 - Acme Corp] Admin ready: email=admin@acme.com password=password123 (scheme=acme-corp)"
 
