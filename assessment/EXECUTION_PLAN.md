@@ -171,7 +171,7 @@ Execute **41 RSpec examples with 0 failures** across:
 * **Hardware Preflight**: Calibrate voice streaming thresholds and accelerate checks to $<3\text{ seconds}$ with local `/health` ping probes.
 
 #### 4.3 Frontend Automated Test Suite (`web/src/`)
-Execute **27 Vitest unit & component tests across 9 suites (0 failures)**:
+Execute **28 Vitest unit & component tests across 9 suites (0 failures)**:
 * `useFitGapQuery.test.tsx` (3 tests): 404 propagation and polling states.
 * `usePortfolioQuery.test.tsx` (4 tests): In-memory optimistic updates, cache rollback, and real-time Fit/Gap recalculation.
 * `ComparisonTable.test.tsx` (4 tests): Delta badge formatting, unassessed fallback, and counters.

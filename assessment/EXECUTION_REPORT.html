@@ -297,7 +297,7 @@
 <h3>First-Principles Framing</h3>
 <ul>
   <li><strong>What is genuinely true?</strong> Traditional resume screening and unstructured interviewing are subjective, noisy, and unscalable. An AI interview system is only viable if its evaluations are <strong>verifiable</strong> (anchored to verbatim candidate speech quotes), <strong>auditable</strong> (supporting human calibration without erasing baseline AI ratings), and <strong>safe</strong> (strictly adhering to data privacy, cryptographic authentication, and multi-tenant isolation).</li>
-  <li><strong>The Monozukuri Standard:</strong> We treated the brief's baseline requirements not as a ceiling, but as a starting floor. Delivered uncompromised system rigor (<strong>41 backend RSpec specs</strong>, <strong>27 frontend Vitest specs across 9 suites</strong>, <strong>6 Playwright E2E flows</strong>, <strong>0 build errors</strong>) and high visual taste across all 6 interaction states.</li>
+  <li><strong>The Monozukuri Standard:</strong> We treated the brief's baseline requirements not as a ceiling, but as a starting floor. Delivered uncompromised system rigor (<strong>41 backend RSpec specs</strong>, <strong>28 frontend Vitest specs across 9 suites</strong>, <strong>6 Playwright E2E flows</strong>, <strong>0 build errors</strong>) and high visual taste across all 6 interaction states.</li>
 </ul>
 
 <h3>Step-by-Step Execution Journey</h3>
@@ -308,7 +308,7 @@
   <li><strong>Stage 3 — Problem Definition & Fullstack Seam Audit:</strong> Identified and ranked critical defects from <strong>P0 to P3</strong> spanning authentication (<code>JsonWebToken</code> secret handling), multi-tenant data isolation (<code>TenantScoped</code>), backend-to-frontend serializer contract seams, stale Fit/Gap caches, unassessed skill crashes, live interview audio capture conflicts, and missing UI interaction states.</li>
   <li><strong>Stage 4 — Revamp Strategy, Acceptance Criteria & Trade-Off Evaluation:</strong> Derived explicit acceptance criteria for all inputs and edge cases before writing code, and evaluated <strong>Option A (Structured Dynamic Compute-on-Read Engine)</strong> vs. <strong>Option B (Event-Driven Materialized Reports with Read-Through Synthesis)</strong>.</li>
   <li><strong>Stage 5 — Monozukuri Fullstack Implementation:</strong> Built the backend rule engine (<code>FitGap::Engine</code>), non-destructive override model (<code>AssessorOverride</code>), multi-source cache invalidation, reversible migration, fail-fast JWT security, and WebAudio 16kHz PCM voice pipeline, paired with a modular React vertical feature slice architecture (<code>src/features/</code>) with optimistic TanStack Query mutations.</li>
-  <li><strong>Stage 6 — Verification, Seeded Fault Proof & Final Packaging:</strong> Built a 41-spec RSpec suite, 27-test Vitest suite, and 6-flow Playwright E2E suite from scratch; proved test effectiveness by injecting a regression on scratch branch <code>fault/seeded-delta-bug</code>; documented AI verification moments; and recorded the end-to-end video demonstration.</li>
+  <li><strong>Stage 6 — Verification, Seeded Fault Proof & Final Packaging:</strong> Built a 41-spec RSpec suite, 28-test Vitest suite, and 6-flow Playwright E2E suite from scratch; proved test effectiveness by injecting a regression on scratch branch <code>fault/seeded-delta-bug</code>; documented AI verification moments; and recorded the end-to-end video demonstration.</li>
 </ol>
 
 <hr>
@@ -552,7 +552,7 @@
     <div class="label">Backend RSpec Specs<br>0 failures</div>
   </div>
   <div class="test-card">
-    <div class="number">27</div>
+    <div class="number">28</div>
     <div class="label">Frontend Vitest Tests<br>9 suites · 0 failures</div>
   </div>
   <div class="test-card">
@@ -567,7 +567,7 @@
 
 <ul>
   <li><strong>Backend (<code>api/</code> RSpec Suite):</strong> <strong>41 examples, 0 failures</strong> (<code>JsonWebToken</code> fail-fast security specs, login tenant-binding specs, <code>PortfolioSkill</code>, <code>AssessorOverride</code>, <code>FitGapReport</code>, <code>FitGap::Engine</code>, <code>FitGapGeneratorWorker</code> tenant isolation, <code>PortfoliosController</code>, and <code>PortfolioSkillsController</code> cross-tenant specs).</li>
-  <li><strong>Frontend Unit & Component (<code>web/</code> Vitest Suite):</strong> <strong>27 tests, 0 failures</strong> across 9 test suites (<code>LoginPage</code>, <code>AssessmentListPage</code>, <code>SkillPortfolioCard</code>, <code>ComparisonTable</code>, <code>navbar</code>, <code>api</code>, <code>internetSpeedTest</code>, <code>usePortfolioQuery</code>, and <code>useFitGapQuery</code> testing optimistic mutations, cache rollback, cross-tenant 404 propagation, and real-time cross-feature in-memory recalculation).</li>
+  <li><strong>Frontend Unit & Component (<code>web/</code> Vitest Suite):</strong> <strong>28 tests, 0 failures</strong> across 9 test suites (<code>LoginPage</code>, <code>AssessmentListPage</code>, <code>SkillPortfolioCard</code>, <code>ComparisonTable</code>, <code>navbar</code>, <code>api</code>, <code>internetSpeedTest</code>, <code>usePortfolioQuery</code>, and <code>useFitGapQuery</code> testing optimistic mutations, cache rollback, cross-tenant 404 propagation, quick-fill demo account interactions, and real-time cross-feature in-memory recalculation).</li>
   <li><strong>Frontend End-to-End (<code>web/</code> Playwright Suite):</strong> <strong>6 browser flows, 0 failures</strong> (Auth, Candidate Invites, Portfolio, Vacancies, Fit/Gap Synthesis, Candidate Interview).</li>
   <li><strong>Continuous Integration:</strong> <code>.github/workflows/ci.yml</code> runs RSpec (fresh PostgreSQL via <code>db:schema:load</code>, ephemeral per-run <code>SECRET_KEY_BASE</code>), Vitest, and <code>tsc &amp;&amp; vite build</code> on every push and pull request.</li>
 </ul>
@@ -632,7 +632,7 @@ Failures:
       <li>In-Memory Real-Time Cross-Feature Cache Sync</li>
       <li>Optimistic UI Mutations with Auto-Rollback</li>
       <li>6-State Interaction UI (all states covered)</li>
-      <li>Vitest Component & Hook Suite (27 tests · 9 suites)</li>
+      <li>Vitest Component & Hook Suite (28 tests · 9 suites)</li>
       <li>Collapsible Shell Layout & Breadcrumbs</li>
     </ul>
   </div>
@@ -792,6 +792,7 @@ end</code></pre>
 <ul>
   <li><strong>Fix:</strong> Bound each user to one organization (<code>users.scheme</code>, reversible migration <code>20260815000002</code>, nullable with no default tenant). The token's tenant now comes <strong>only</strong> from the authenticated user's membership via exact <code>Organization.find_by(scheme:)</code>. Client params and headers are ignored, and login fails closed (<strong>HTTP 403</strong>) if the user has no valid organization.</li>
   <li><strong>Proof (<code>spec/requests/api/v1/authentication_spec.rb</code> — 6 specs):</strong> Verifies that the token carries the user's own tenant, spoofed <code>scheme</code> params and <code>X-Tenant-Scheme</code> headers are ignored, users with nil or unknown schemes receive HTTP 403, and invalid credentials receive HTTP 401.</li>
+  <li><strong>Multi-Tenant Seed Reset:</strong> The seeds now provision two fully isolated tenants (<code>test-corp</code>, <code>acme-corp</code>), each with distinct assessments, vacancies, candidate sessions, and portfolios, paired with 1-click Quick-Fill buttons in the login UI.</li>
   <li><strong>Known Residual Risk (Documented):</strong> Baseline <code>TenantScoped</code> fails open when no tenant is set in <code>RequestStore</code>. Contained today via <code>require_tenant!</code> on HTTP endpoints and <code>Current.using</code> in workers; a stricter follow-up would raise when queried without a tenant outside an explicit bypass block.</li>
 </ul>
 
@@ -806,13 +807,21 @@ end</code></pre>
 
 <hr>
 
+<h3>9.6 Client-Side Multi-Tenant Isolation & In-Memory Query Cache Purge</h3>
+<ul>
+  <li><strong>QueryClient Cache Purge:</strong> TanStack Query defaults to <code>staleTime: 5 mins</code>. When switching between <code>admin@example.com</code> and <code>admin@acme.com</code>, queries were previously reused from RAM. Calling <code>queryClient.clear()</code> upon login, logout, and 401/403 session expiration completely eliminates in-memory data bleeding across tenants.</li>
+  <li><strong>Dynamic Tenant Synchronization:</strong> Bound the navbar tenant badge to a reactive <code>tenantAtom</code> backed by <code>localStorage</code>, dynamically reflecting the authenticated tenant name and scheme.</li>
+</ul>
+
+<hr>
+
 <!-- ========== §10 ========== -->
 <h2 id="s10">10. Conclusion & Final Submission Checklist</h2>
 
 <p>This submission bridges the gap between raw AI transcripts and actionable, trustworthy hiring decisions, fulfilling every requirement of <code>brief-fullstack.pdf</code> (Step 6: Final Submission) and resolving all four technical reviewer revisions.</p>
 
 <div class="callout callout-success">
-  <strong>&check; Final Submission &amp; Reviewer Audit Complete:</strong> 41 backend RSpec specs passing, 27 frontend Vitest tests passing across 9 suites, 6 Playwright browser flows passing, 0 TypeScript errors, CI workflow active, seeded fault proven and reverted on branch <code>fault/seeded-delta-bug</code>, AI verification moments documented, all 6 Monozukuri interaction states implemented, and all 4 technical reviewer revisions resolved and verified.
+  <strong>&check; Final Submission &amp; Reviewer Audit Complete:</strong> 41 backend RSpec specs passing, 28 frontend Vitest tests passing across 9 suites, 6 Playwright browser flows passing, 0 TypeScript errors, CI workflow active, seeded fault proven and reverted on branch <code>fault/seeded-delta-bug</code>, AI verification moments documented, all 6 Monozukuri interaction states implemented, and all 4 technical reviewer revisions resolved and verified.
 </div>
 
 </div>

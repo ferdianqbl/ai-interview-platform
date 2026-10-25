@@ -272,7 +272,7 @@ To solve the candidate voice streaming failure, eliminate browser dictation conf
 
 ## 8. Frontend Testing Architecture (`web/src/`)
 
-Using **Vitest** and **React Testing Library**: **27 tests across 9 test suites, 0 failures**.
+Using **Vitest** and **React Testing Library**: **28 tests across 9 test suites, 0 failures**.
 
 * **`useFitGapQuery.test.tsx` (3 tests)**:
   - Validates `404` and `422` error propagation without infinite polling.
