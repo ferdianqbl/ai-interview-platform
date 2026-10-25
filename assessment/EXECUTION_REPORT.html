@@ -282,9 +282,8 @@
     <li><a href="#s6">6. Visual Screenshots & UI Implementation</a></li>
     <li><a href="#s7">7. Test Coverage Evidence, Seeded Fault Test Proof & AI Verification Notes</a></li>
     <li><a href="#s8">8. Claimed Engineering Depth (Backend vs. Frontend)</a></li>
-    <li><a href="#s9">9. Live Technical Defense Strategy (CTO & Tech Lead)</a></li>
-    <li><a href="#s10"><strong>10. Technical Reviewer Revision Responses (Post-Submission Audit & Resolution)</strong></a></li>
-    <li><a href="#s11">11. Conclusion & Final Submission Checklist</a></li>
+    <li><a href="#s9"><strong>9. Technical Reviewer Revision Responses (Post-Submission Audit & Resolution)</strong></a></li>
+    <li><a href="#s10">10. Conclusion & Final Submission Checklist</a></li>
   </ol>
 </div>
 
@@ -628,49 +627,13 @@ Failures:
 
 <hr>
 
-<!-- ========== §9 ========== -->
-<h2 id="s9">9. Live Technical Defense Strategy (CTO & Tech Lead)</h2>
-
-<table>
-  <thead>
-    <tr>
-      <th>Anticipated Question</th>
-      <th>Architectural Rationale & Defense</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><em>If the Dynamic Option (Option A) is cleanly structured in a service object, what are its true trade-offs vs. Materialized (Option B)?</em></td>
-      <td>A cleanly structured Dynamic <code>FitGap::Engine</code> offers <strong>100% strong read consistency</strong>, zero cache-invalidation complexity, and instant formula evolution without DB backfills. However, because Fit/Gap includes <strong>Gemini LLM narrative synthesis</strong> (1.5s–15s latency, stochastic outputs, per-call token cost), compute-on-read penalizes every page view. Materialization (Option B) trades higher implementation complexity (multi-entity cache invalidation across <code>AssessorOverride</code>, <code>Vacancy</code>, and <code>Portfolio</code>, eventual consistency lag, and Redis/Sidekiq operational cost) for &lt;50ms deterministic reads and point-in-time auditability.</td>
-    </tr>
-    <tr>
-      <td><em>How do you enforce multi-tenant isolation and JWT security?</em></td>
-      <td>All tenant-owned queries enforce <code>TenantScoped</code> (<code>Current.tenant_id</code>) across controllers (<code>Vacancy.find_by</code>, <code>Portfolio.joins(:session)</code>) and background workers (<code>Current.using(tenant_id:)</code>), with zero <code>.unscoped</code> leaks. <code>JsonWebToken</code> enforces fail-fast <code>ENV.fetch('SECRET_KEY_BASE')</code> validation with no hardcoded fallback secrets.</td>
-    </tr>
-    <tr>
-      <td><em>How do you guarantee candidate fairness under UU PDP?</em></td>
-      <td>Evidence quote anchoring prevents hallucinated claims; immutable AI baselines paired with assessor audit records guarantee full human-in-the-loop oversight; PII parameters are filtered from logs.</td>
-    </tr>
-    <tr>
-      <td><em>What happens during an LLM outage?</em></td>
-      <td>Designed failure paths provide deterministic fallback narratives, transactional skill persistence, and single-click retry triggers without throwing 500 errors.</td>
-    </tr>
-    <tr>
-      <td><em>Why Vitest over Jest for the frontend?</em></td>
-      <td>Vitest integrates natively with the existing Vite build pipeline — zero config overhead, sub-second HMR test reruns, and native ESM/TypeScript support.</td>
-    </tr>
-  </tbody>
-</table>
-
-<hr>
-
-<!-- ========== §10: NEW DEDICATED REVIEWER REVISION SECTION ========== -->
+<!-- ========== §9: DEDICATED REVIEWER REVISION SECTION ========== -->
 <div class="page-break"></div>
-<h2 id="s10">10. Technical Reviewer Revision Responses (Post-Submission Audit & Resolution)</h2>
+<h2 id="s9">9. Technical Reviewer Revision Responses (Post-Submission Audit & Resolution)</h2>
 
 <p>Following the initial submission review, we audited and resolved all four technical feedback items raised by the reviewer, alongside a fullstack hardening of the live AI voice interview pipeline. Below is our point-by-point architectural and code resolution.</p>
 
-<h3>10.1 Review #1: Evaluasi Dynamic Option (Structured & Maintainable Implementation Assumption)</h3>
+<h3>9.1 Review #1: Evaluasi Dynamic Option (Structured & Maintainable Implementation Assumption)</h3>
 
 <div class="callout callout-info">
   <strong>Reviewer Feedback:</strong> <em>"Alasan penolakan opsi dynamic saat ini berfokus pada logika yang tersebar di berbagai controller dan serializer. Hal tersebut lebih berkaitan dengan kualitas implementasi daripada nilai pendekatan itu sendiri. Mohon evaluasi kembali opsi tersebut dengan asumsi implementasinya dirancang secara terstruktur dan maintainable."</em>
@@ -696,7 +659,7 @@ Failures:
 
 <hr>
 
-<h3>10.2 Review #2: Cost, Implementation Complexity & Operational Risk pada Opsi Terpilih (Materialized Option)</h3>
+<h3>9.2 Review #2: Cost, Implementation Complexity & Operational Risk pada Opsi Terpilih (Materialized Option)</h3>
 
 <div class="callout callout-info">
   <strong>Reviewer Feedback:</strong> <em>"Evaluasi pendekatan materialized saat ini lebih banyak menyoroti kelebihan dan mitigasinya. Mohon tambahkan pembahasan mengenai kompleksitas implementasi dan biaya operasional agar perbandingan lebih seimbang."</em>
@@ -730,7 +693,7 @@ Failures:
 <hr>
 
 <div class="page-break"></div>
-<h3>10.3 Review #3: Fallback Secret JWT Elimination (<code>JsonWebToken</code> Fail-Fast Enforcement)</h3>
+<h3>9.3 Review #3: Fallback Secret JWT Elimination (<code>JsonWebToken</code> Fail-Fast Enforcement)</h3>
 
 <div class="callout callout-info">
   <strong>Reviewer Feedback:</strong> <em>"Implementasi signing JWT masih menggunakan secret yang di-hardcode ketika environment secret tidak tersedia. Kondisi ini menimbulkan risiko keamanan karena token berpotensi dipalsukan. Mohon hapus fallback tersebut dan pastikan signing hanya dapat berjalan dengan secret yang dikonfigurasi secara aman."</em>
@@ -773,7 +736,7 @@ end</code></pre>
 
 <hr>
 
-<h3>10.4 Review #4: Penggunaan <code>Vacancy.unscoped</code> Elimination & Strict Multi-Tenant Isolation</h3>
+<h3>9.4 Review #4: Penggunaan <code>Vacancy.unscoped</code> Elimination & Strict Multi-Tenant Isolation</h3>
 
 <div class="callout callout-info">
   <strong>Reviewer Feedback:</strong> <em>"Query vacancy menggunakan Vacancy.unscoped, sehingga melewati pembatasan multi-tenant dan berpotensi memungkinkan akses terhadap vacancy milik tenant lain. Mohon pastikan query tetap menerapkan scoping tenant yang sesuai."</em>
@@ -810,7 +773,7 @@ end</code></pre>
 
 <hr>
 
-<h3>10.5 Post-Submission Hardening: Real-Time AI Voice Interview Pipeline & Hardware Preflight</h3>
+<h3>9.5 Post-Submission Hardening: Real-Time AI Voice Interview Pipeline & Hardware Preflight</h3>
 <ul>
   <li><strong>Eliminated OS Dictation Conflict ("duk duk" Chime):</strong> Removed the browser <code>SpeechRecognition</code> API from <code>InterviewPage.tsx</code>, which previously competed with the WebAudio <code>AudioWorklet</code> stream on macOS and caused hardware lockups.</li>
   <li><strong>Real-Time PCM Volume Visualizer:</strong> Added Int16 PCM Root-Mean-Square (RMS) calculation in <code>useAudioCapture.ts</code> driving an emerald-green animated waveform in <code>VoiceBars.tsx</code> when the candidate speaks.</li>
@@ -819,8 +782,8 @@ end</code></pre>
 
 <hr>
 
-<!-- ========== §11 ========== -->
-<h2 id="s11">11. Conclusion & Final Submission Checklist</h2>
+<!-- ========== §10 ========== -->
+<h2 id="s10">10. Conclusion & Final Submission Checklist</h2>
 
 <p>This submission bridges the gap between raw AI transcripts and actionable, trustworthy hiring decisions, fulfilling every requirement of <code>brief-fullstack.pdf</code> (Step 6: Final Submission) and resolving all four technical reviewer revisions.</p>
 

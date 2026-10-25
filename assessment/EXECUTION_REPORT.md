@@ -16,9 +16,8 @@
 6. [Visual Screenshots & UI Implementation](#6-visual-screenshots--ui-implementation)
 7. [Test Coverage Evidence, Seeded Fault Test Proof & AI Verification Notes](#7-test-coverage-evidence-seeded-fault-test-proof--ai-verification-notes)
 8. [Claimed Engineering Depth (Backend vs. Frontend)](#8-claimed-engineering-depth-backend-vs-frontend)
-9. [Live Technical Defense Strategy (CTO & Tech Lead)](#9-live-technical-defense-strategy-cto--tech-lead)
-10. [Technical Reviewer Revision Responses (Post-Submission Audit & Resolution)](#10-technical-reviewer-revision-responses-post-submission-audit--resolution)
-11. [Conclusion & Final Submission Checklist](#11-conclusion--final-submission-checklist)
+9. [Technical Reviewer Revision Responses (Post-Submission Audit & Resolution)](#9-technical-reviewer-revision-responses-post-submission-audit--resolution)
+10. [Conclusion & Final Submission Checklist](#10-conclusion--final-submission-checklist)
 
 ---
 
@@ -181,25 +180,13 @@ To prove the test harness is active, reliable, and capable of catching subtle re
 
 ---
 
-## 9. Live Technical Defense Strategy (CTO & Tech Lead)
-
-| Anticipated Question | Architectural Rationale & Defense |
-|---|---|
-| *If the Dynamic Option (Option A) is cleanly structured in a service object, what are its true trade-offs vs. Materialized (Option B)?* | A cleanly structured Dynamic `FitGap::Engine` offers **100% strong read consistency**, zero cache-invalidation complexity, and instant formula evolution without DB backfills. However, because Fit/Gap includes **Gemini LLM narrative synthesis** ($1.5\text{ s}–15\text{ s}$ latency, stochastic outputs, per-call token cost), compute-on-read penalizes every page view. Materialization (Option B) trades higher implementation complexity (multi-entity cache invalidation across `AssessorOverride`, `Vacancy`, and `Portfolio`, eventual consistency lag, and Redis/Sidekiq operational cost) for $<50\text{ ms}$ deterministic reads and point-in-time auditability. |
-| *How do you enforce multi-tenant isolation and JWT security?* | All tenant-owned queries enforce `TenantScoped` (`Current.tenant_id`) across controllers (`Vacancy.find_by`, `Portfolio.joins(:session)`) and background workers (`Current.using(tenant_id:)`), with zero `.unscoped` leaks. `JsonWebToken` enforces fail-fast `ENV.fetch('SECRET_KEY_BASE')` validation with no hardcoded fallback secrets. |
-| *How do you guarantee candidate fairness under UU PDP?* | Evidence quote anchoring prevents hallucinated claims; immutable AI baselines paired with assessor audit records guarantee full human-in-the-loop oversight; PII parameters are filtered from logs. |
-| *What happens during an LLM outage?* | Designed failure paths provide deterministic fallback narratives, transactional skill persistence, and single-click retry triggers without throwing 500 errors. |
-| *Why Vitest over Jest for the frontend?* | Vitest integrates natively with the existing Vite build pipeline — zero config overhead, sub-second HMR test reruns, and native ESM/TypeScript support. |
-
----
-
-## 10. Technical Reviewer Revision Responses (Post-Submission Audit & Resolution)
+## 9. Technical Reviewer Revision Responses (Post-Submission Audit & Resolution)
 
 Following the initial submission review, we audited and resolved all four technical feedback items raised by the reviewer, alongside a fullstack hardening of the live AI voice interview pipeline. Below is our point-by-point architectural and code resolution.
 
 ---
 
-### 10.1 Review #1: Evaluasi Dynamic Option (Structured & Maintainable Implementation Assumption)
+### 9.1 Review #1: Evaluasi Dynamic Option (Structured & Maintainable Implementation Assumption)
 
 > **Reviewer Feedback:**  
 > *"Alasan penolakan opsi dynamic saat ini berfokus pada logika yang tersebar di berbagai controller dan serializer. Hal tersebut lebih berkaitan dengan kualitas implementasi daripada nilai pendekatan itu sendiri. Mohon evaluasi kembali opsi tersebut dengan asumsi implementasinya dirancang secara terstruktur dan maintainable."*
@@ -221,7 +208,7 @@ Even with a clean, modular service implementation, Option A exhibits fundamental
 
 ---
 
-### 10.2 Review #2: Cost, Implementation Complexity & Operational Risk pada Opsi Terpilih (Materialized Option)
+### 9.2 Review #2: Cost, Implementation Complexity & Operational Risk pada Opsi Terpilih (Materialized Option)
 
 > **Reviewer Feedback:**  
 > *"Evaluasi pendekatan materialized saat ini lebih banyak menyoroti kelebihan dan mitigasinya. Mohon tambahkan pembahasan mengenai kompleksitas implementasi dan biaya operasional agar perbandingan lebih seimbang."*
@@ -247,7 +234,7 @@ Choosing **Option B (Event-Driven Materialized Reports)** is not free. While it 
 
 ---
 
-### 10.3 Review #3: Fallback Secret JWT Elimination (`JsonWebToken` Fail-Fast Enforcement)
+### 9.3 Review #3: Fallback Secret JWT Elimination (`JsonWebToken` Fail-Fast Enforcement)
 
 > **Reviewer Feedback:**  
 > *"Implementasi signing JWT masih menggunakan secret yang di-hardcode ketika environment secret tidak tersedia. Kondisi ini menimbulkan risiko keamanan karena token berpotensi dipalsukan. Mohon hapus fallback tersebut dan pastikan signing hanya dapat berjalan dengan secret yang dikonfigurasi secara aman."*
@@ -296,7 +283,7 @@ We added 3 dedicated security specs verifying:
 
 ---
 
-### 10.4 Review #4: Penggunaan `Vacancy.unscoped` Elimination & Strict Multi-Tenant Isolation
+### 9.4 Review #4: Penggunaan `Vacancy.unscoped` Elimination & Strict Multi-Tenant Isolation
 
 > **Reviewer Feedback:**  
 > *"Query vacancy menggunakan Vacancy.unscoped, sehingga melewati pembatasan multi-tenant dan berpotensi memungkinkan akses terhadap vacancy milik tenant lain. Mohon pastikan query tetap menerapkan scoping tenant yang sesuai."*
@@ -339,7 +326,7 @@ We eliminated all uses of `Vacancy.unscoped` across the codebase and enforced st
 
 ---
 
-### 10.5 Post-Submission Hardening: Real-Time AI Voice Interview Pipeline & Hardware Preflight
+### 9.5 Post-Submission Hardening: Real-Time AI Voice Interview Pipeline & Hardware Preflight
 
 To ensure the end-to-end candidate experience is equally top-notch, we also audited and resolved the live AI voice interview workflow:
 1. **Eliminated OS Dictation Conflict (`"duk duk"` Chime)**: Removed the browser `SpeechRecognition` API from [`InterviewPage.tsx`](file:///Users/ferdianqbl/_WORK/Exploration/FS/tech-test/rakamin-v2/ai-interview-platform/web/src/pages/interview/InterviewPage.tsx), which previously competed with the WebAudio `AudioWorklet` stream on macOS and caused hardware lockups.
@@ -348,7 +335,7 @@ To ensure the end-to-end candidate experience is equally top-notch, we also audi
 
 ---
 
-## 11. Conclusion & Final Submission Checklist
+## 10. Conclusion & Final Submission Checklist
 
 This submission bridges the gap between raw AI transcripts and actionable, trustworthy hiring decisions, fulfilling every requirement of [`brief-fullstack.pdf`](file:///Users/ferdianqbl/_WORK/Exploration/FS/tech-test/rakamin-v2/brief-fullstack.pdf) and resolving all four technical reviewer revisions.
 
