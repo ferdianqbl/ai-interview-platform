@@ -52,7 +52,7 @@ module Api
       end
 
       def set_portfolio_skill
-        @portfolio_skill = PortfolioSkill.joins(:portfolio)
+        @portfolio_skill = PortfolioSkill.joins(portfolio: :session)
                                          .find(params[:id])
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio skill not found", :not_found)

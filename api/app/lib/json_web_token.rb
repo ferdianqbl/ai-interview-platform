@@ -29,9 +29,10 @@ class JsonWebToken
   end
 
   def self.hmac_secret
-    ENV['SECRET_KEY_BASE'].presence ||
-      Rails.application.secret_key_base.presence ||
-      'dev_secret_key_base_minimum_64_bytes_fallback_for_local_ai_interview_platform'
+    secret = ENV.fetch('SECRET_KEY_BASE')
+    raise KeyError, 'SECRET_KEY_BASE cannot be blank' if secret.strip.empty?
+
+    secret
   end
   private_class_method :hmac_secret
 end

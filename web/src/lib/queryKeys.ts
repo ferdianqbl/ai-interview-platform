@@ -3,6 +3,7 @@ export const queryKeys = {
     all: ["assessments"] as const,
     list: (page?: number) => ["assessments", "list", page ?? 1] as const,
     detail: (id: number | string) => ["assessments", "detail", Number(id)] as const,
+    sessions: (assessmentId: number | string) => ["assessments", Number(assessmentId), "sessions"] as const,
   },
   vacancies: {
     all: ["vacancies"] as const,
@@ -20,6 +21,7 @@ export const queryKeys = {
   },
   fitgap: {
     all: ["fitgap"] as const,
+    byPortfolio: (portfolioId: number | string) => ["fitgap", Number(portfolioId)] as const,
     detail: (portfolioId: number | string, vacancyId: number | string) =>
       ["fitgap", Number(portfolioId), Number(vacancyId)] as const,
   },
