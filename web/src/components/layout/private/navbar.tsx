@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAtomValue, useSetAtom } from "jotai";
-import { tenantAtom } from "@/stores/tenantAtom";
+import { tenantAtom, clearTenant, defaultTenant } from "@/stores/tenantAtom";
 import { authAtom, clearToken } from "@/stores/authAtom";
+import { queryClient } from "@/lib/queryClient";
 import {
   Sparkles,
   ClipboardList,
@@ -42,12 +43,16 @@ export default function PrivateNavbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const tenant = useAtomValue(tenantAtom);
+  const setTenant = useSetAtom(tenantAtom);
   const setAuth = useSetAtom(authAtom);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleLogout = () => {
     clearToken();
+    clearTenant();
+    queryClient.clear();
     setAuth({ token: null });
+    setTenant(defaultTenant);
     setMobileOpen(false);
     toast.success("Logged out successfully");
     navigate("/login");
