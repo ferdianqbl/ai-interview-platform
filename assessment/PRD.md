@@ -127,7 +127,7 @@ In accordance with **Undang-Undang No. 27 Tahun 2022 tentang Pelindungan Data Pr
 | **Resilience & Idempotency** | Sidekiq workers (`FitGapGeneratorWorker`, `PortfolioGeneratorWorker`) must be strictly idempotent and safe against duplicate job execution. | Seeded duplicate job execution tests in RSpec. |
 | **Data Safety & Integrity** | Reversible database migrations; strict foreign key cascade/nullify rules; database check constraints on levels ($1 \le \text{level} \le 5$); fail-fast JWT validation with zero hardcoded secrets. | Migration rollback verification; PostgreSQL constraint checks; `JsonWebToken` specs. |
 | **Multi-Tenant Security** | Strict data isolation across tenants without bypasses (`Vacancy.unscoped` eliminated; `Current.using` in workers). | RSpec cross-tenant isolation request & worker specs. |
-| **Test Verification Rigor** | Fullstack automated test coverage across unit, request, integration, and E2E layers. | **35 passing RSpec backend specs**, **27 passing Vitest frontend tests across 9 suites**, **6 Playwright E2E browser flows**, 0 TypeScript build errors. |
+| **Test Verification Rigor** | Fullstack automated test coverage across unit, request, integration, and E2E layers. | **41 passing RSpec backend specs**, **27 passing Vitest frontend tests across 9 suites**, **6 Playwright E2E browser flows**, 0 TypeScript build errors. |
 | **Accessibility (a11y)** | Keyboard navigable modals, accessible contrast ratios (WCAG 2.1 AA), ARIA attributes on interactive elements. | Radix UI accessible primitives; automated a11y audit. |
 
 ---
@@ -163,7 +163,7 @@ The frontend must explicitly handle all 6 interaction states across both `Portfo
   4. Elimination of `Vacancy.unscoped`; strict multi-tenant scoping in controllers and Sidekiq workers.
 * End-to-end AI Voice Interview experience: WebAudio 16kHz PCM streaming, removal of `webkitSpeechRecognition` conflict, real-time emerald RMS visualizer (`VoiceBars.tsx`), async 1.7s silence detection, and multimodal WAV transcription with Gemini `v1beta` model fallback chain.
 * Reversible database migration `20260815000001_add_assessment_state_and_narrative_status.rb`.
-* Complete automated test harnesses: **35 RSpec examples** + **27 Vitest tests** + **6 Playwright browser flows**.
+* Complete automated test harnesses: **41 RSpec examples** + **27 Vitest tests** + **6 Playwright browser flows**.
 * Seeded fault experiment and AI verification case study documentation.
 
 ### 7.2 Out of Scope (Future Milestones)

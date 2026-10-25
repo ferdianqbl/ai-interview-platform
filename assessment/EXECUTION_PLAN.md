@@ -138,7 +138,7 @@ Both options assume clean, modular domain encapsulation within `FitGap::Engine`:
    * Add reversible database migration ensuring complete schema synchronization.
 
 #### 3.3 Backend Automated Test Suite (`api/spec/`)
-Execute **35 RSpec examples with 0 failures** across:
+Execute **41 RSpec examples with 0 failures** across:
 * **`spec/lib/json_web_token_spec.rb`**: JWT encoding, decoding, expiration, tampering rejection, and fail-fast `KeyError` verification.
 * **`spec/workers/fit_gap_generator_worker_spec.rb`**: Multi-tenant isolation in Sidekiq, raising `RecordNotFound` on cross-tenant vacancies.
 * **`spec/models/portfolio_skill_spec.rb` & `assessor_override_spec.rb` & `fit_gap_report_spec.rb`**: Model validations, constraints, and relations.

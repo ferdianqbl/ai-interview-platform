@@ -132,7 +132,7 @@ api/
 │   │   └── 20260815000001_add_assessment_state_and_narrative_status.rb
 │   ├── schema.rb                      # PostgreSQL schema definition with custom enums
 │   └── seeds.rb                       # Development and staging seed data
-└── spec/                              # RSpec Automated Test Suite (35 passing examples)
+└── spec/                              # RSpec Automated Test Suite (41 passing examples)
     ├── factories/                     # FactoryBot fixture definitions
     ├── lib/                           # Library specs (JsonWebToken fail-fast)
     ├── models/                        # Model unit tests
@@ -272,7 +272,7 @@ The `FitGap::Engine` bridges candidate competency with role requirements through
 
 ## 6. Backend Testing Strategy (`api/spec/`)
 
-The backend test harness uses **RSpec 6**, **FactoryBot**, and **DatabaseCleaner**: **35 examples, 0 failures** (`0.78s`).
+The backend test harness uses **RSpec 6**, **FactoryBot**, and **DatabaseCleaner**: **41 examples, 0 failures** (`0.78s`).
 
 * **Security & Auth Specs (`spec/lib/json_web_token_spec.rb`)**: Verifies HMAC-SHA256 encoding/decoding, expiration claims, signature tampering rejection, and fail-fast `KeyError` when `SECRET_KEY_BASE` is unset or blank.
 * **Worker & Multi-Tenancy Specs (`spec/workers/fit_gap_generator_worker_spec.rb`)**: Verifies report generation within tenant bounds and raises `ActiveRecord::RecordNotFound` when attempting to access a cross-tenant vacancy.

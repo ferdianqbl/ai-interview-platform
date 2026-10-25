@@ -266,7 +266,7 @@
     <dt>Video Walkthrough:</dt>
     <dd><a href="https://www.awesomescreenshot.com/video/55666106?key=63cd1783c7a06deab95b8e4ba6ab0e96">Live Demo Video Walkthrough</a></dd>
     <dt>Submission Date:</dt>
-    <dd>August 2026 <em>(Updated with Section 10: Reviewer Revisions)</em></dd>
+    <dd>August 2026 <em>(Revised October 2026 with Section 9: Technical Reviewer Revision Responses)</em></dd>
   </dl>
 </div>
 
@@ -297,7 +297,7 @@
 <h3>First-Principles Framing</h3>
 <ul>
   <li><strong>What is genuinely true?</strong> Traditional resume screening and unstructured interviewing are subjective, noisy, and unscalable. An AI interview system is only viable if its evaluations are <strong>verifiable</strong> (anchored to verbatim candidate speech quotes), <strong>auditable</strong> (supporting human calibration without erasing baseline AI ratings), and <strong>safe</strong> (strictly adhering to data privacy, cryptographic authentication, and multi-tenant isolation).</li>
-  <li><strong>The Monozukuri Standard:</strong> We treated the brief's baseline requirements not as a ceiling, but as a starting floor. Delivered uncompromised system rigor (<strong>35 backend RSpec specs</strong>, <strong>27 frontend Vitest specs across 9 suites</strong>, <strong>6 Playwright E2E flows</strong>, <strong>0 build errors</strong>) and high visual taste across all 6 interaction states.</li>
+  <li><strong>The Monozukuri Standard:</strong> We treated the brief's baseline requirements not as a ceiling, but as a starting floor. Delivered uncompromised system rigor (<strong>41 backend RSpec specs</strong>, <strong>27 frontend Vitest specs across 9 suites</strong>, <strong>6 Playwright E2E flows</strong>, <strong>0 build errors</strong>) and high visual taste across all 6 interaction states.</li>
 </ul>
 
 <h3>Step-by-Step Execution Journey</h3>
@@ -308,7 +308,7 @@
   <li><strong>Stage 3 — Problem Definition & Fullstack Seam Audit:</strong> Identified and ranked critical defects from <strong>P0 to P3</strong> spanning authentication (<code>JsonWebToken</code> secret handling), multi-tenant data isolation (<code>TenantScoped</code>), backend-to-frontend serializer contract seams, stale Fit/Gap caches, unassessed skill crashes, live interview audio capture conflicts, and missing UI interaction states.</li>
   <li><strong>Stage 4 — Revamp Strategy, Acceptance Criteria & Trade-Off Evaluation:</strong> Derived explicit acceptance criteria for all inputs and edge cases before writing code, and evaluated <strong>Option A (Structured Dynamic Compute-on-Read Engine)</strong> vs. <strong>Option B (Event-Driven Materialized Reports with Read-Through Synthesis)</strong>.</li>
   <li><strong>Stage 5 — Monozukuri Fullstack Implementation:</strong> Built the backend rule engine (<code>FitGap::Engine</code>), non-destructive override model (<code>AssessorOverride</code>), multi-source cache invalidation, reversible migration, fail-fast JWT security, and WebAudio 16kHz PCM voice pipeline, paired with a modular React vertical feature slice architecture (<code>src/features/</code>) with optimistic TanStack Query mutations.</li>
-  <li><strong>Stage 6 — Verification, Seeded Fault Proof & Final Packaging:</strong> Built a 35-spec RSpec suite, 27-test Vitest suite, and 6-flow Playwright E2E suite from scratch; proved test effectiveness by injecting a regression on scratch branch <code>fault/seeded-delta-bug</code>; documented AI verification moments; and recorded the end-to-end video demonstration.</li>
+  <li><strong>Stage 6 — Verification, Seeded Fault Proof & Final Packaging:</strong> Built a 41-spec RSpec suite, 27-test Vitest suite, and 6-flow Playwright E2E suite from scratch; proved test effectiveness by injecting a regression on scratch branch <code>fault/seeded-delta-bug</code>; documented AI verification moments; and recorded the end-to-end video demonstration.</li>
 </ol>
 
 <hr>
@@ -357,15 +357,22 @@
   <tbody>
     <tr>
       <td><span class="badge badge-p1">P0</span></td>
+      <td>Security / Multi-Tenancy</td>
+      <td>Login endpoint chose the token's tenant from the client-supplied <code>X-Tenant-Scheme</code> header, falling back to the first organization and then a hardcoded <code>'test-corp'</code> <em>(found in the post-review re-audit, see &sect;9.4)</em></td>
+      <td>A user of Tenant A could obtain a validly signed token for Tenant B, bypassing all tenant scoping</td>
+      <td>Defective Impl</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-p1">P0</span></td>
       <td>Security / Auth</td>
-      <td>Hardcoded JWT secret fallback risk if <code>SECRET_KEY_BASE</code> is unset or blank in <code>JsonWebToken</code></td>
-      <td>Allows cryptographic token forgery (<code>HS256</code>) and complete authentication bypass across tenants</td>
+      <td><code>SECRET_KEY_BASE</code> accepted a blank value in <code>JsonWebToken</code>; during our local setup we also added a hardcoded dev fallback (<code>e5fe606</code>), flagged in &sect;9.3</td>
+      <td>A blank or known secret allows <code>HS256</code> token forgery and complete authentication bypass across tenants</td>
       <td>Defective Impl</td>
     </tr>
     <tr>
       <td><span class="badge badge-p1">P0</span></td>
       <td>Security / Multi-Tenancy</td>
-      <td>Unscoped <code>Vacancy.unscoped</code> / <code>Portfolio</code> queries bypassing <code>TenantScoped</code> (<code>Current.tenant_id</code>)</td>
+      <td><code>Vacancy.unscoped</code> in <code>FitGapGeneratorWorker</code> (baseline) and Fit/Gap controller lookups (<code>7dd8083</code>), bypassing <code>TenantScoped</code> (<code>Current.tenant_id</code>)</td>
       <td>Enables cross-tenant data leakage of confidential job vacancies and candidate portfolios</td>
       <td>Defective Impl</td>
     </tr>
@@ -541,7 +548,7 @@
 
 <div class="test-results">
   <div class="test-card">
-    <div class="number">35</div>
+    <div class="number">41</div>
     <div class="label">Backend RSpec Specs<br>0 failures</div>
   </div>
   <div class="test-card">
@@ -559,24 +566,30 @@
 </div>
 
 <ul>
-  <li><strong>Backend (<code>api/</code> RSpec Suite):</strong> <strong>35 examples, 0 failures</strong> (<code>JsonWebToken</code> fail-fast security specs, <code>PortfolioSkill</code>, <code>AssessorOverride</code>, <code>FitGapReport</code>, <code>FitGap::Engine</code>, <code>FitGapGeneratorWorker</code> tenant isolation, <code>PortfoliosController</code>, and <code>PortfolioSkillsController</code> cross-tenant specs).</li>
+  <li><strong>Backend (<code>api/</code> RSpec Suite):</strong> <strong>41 examples, 0 failures</strong> (<code>JsonWebToken</code> fail-fast security specs, login tenant-binding specs, <code>PortfolioSkill</code>, <code>AssessorOverride</code>, <code>FitGapReport</code>, <code>FitGap::Engine</code>, <code>FitGapGeneratorWorker</code> tenant isolation, <code>PortfoliosController</code>, and <code>PortfolioSkillsController</code> cross-tenant specs).</li>
   <li><strong>Frontend Unit & Component (<code>web/</code> Vitest Suite):</strong> <strong>27 tests, 0 failures</strong> across 9 test suites (<code>LoginPage</code>, <code>AssessmentListPage</code>, <code>SkillPortfolioCard</code>, <code>ComparisonTable</code>, <code>navbar</code>, <code>api</code>, <code>internetSpeedTest</code>, <code>usePortfolioQuery</code>, and <code>useFitGapQuery</code> testing optimistic mutations, cache rollback, cross-tenant 404 propagation, and real-time cross-feature in-memory recalculation).</li>
   <li><strong>Frontend End-to-End (<code>web/</code> Playwright Suite):</strong> <strong>6 browser flows, 0 failures</strong> (Auth, Candidate Invites, Portfolio, Vacancies, Fit/Gap Synthesis, Candidate Interview).</li>
+  <li><strong>Continuous Integration:</strong> <code>.github/workflows/ci.yml</code> runs RSpec (fresh PostgreSQL via <code>db:schema:load</code>, ephemeral per-run <code>SECRET_KEY_BASE</code>), Vitest, and <code>tsc &amp;&amp; vite build</code> on every push and pull request.</li>
 </ul>
 
 <h3>7.2 Seeded Fault Test Proof</h3>
-<p>To prove the test harness is active, reliable, and capable of catching subtle regressions:</p>
-<p><strong>1. Injected Defect on Scratch Branch <code>fault/seeded-delta-bug</code>:</strong></p>
-<pre><code># Inverted delta arithmetic in FitGap::Engine
-delta = expected_level - candidate_level</code></pre>
-<p><strong>2. Terminal Test Failure Log (RSpec immediately caught the regression):</strong></p>
+<p>To prove the tests are real, the fault was committed and reverted on a dedicated branch so the history is visible (<a href="https://github.com/ferdianqbl/ai-interview-platform/commits/fault/seeded-delta-bug"><code>fault/seeded-delta-bug</code></a>):</p>
+<ul>
+  <li><strong>Base:</strong> Branched from <code>390d661</code> &rarr; <code>41 examples, 0 failures</code></li>
+  <li><strong>Step 1 (Inject Fault — commit <code>e9879be</code>):</strong> Inverted delta arithmetic in <code>api/app/services/fit_gap/engine.rb</code>:</li>
+</ul>
+<pre><code>- delta = candidate_level - expected_level
++ delta = expected_level - candidate_level # SEEDED FAULT: inverted delta</code></pre>
+<p><strong>Step 2 (Actual RSpec Failure Log):</strong></p>
 <pre><code>FitGap::Engine#call correctly calculates match, exceed, gap, and not_assessed (FAILED - 1)
 Failures:
   1) FitGap::Engine#call correctly calculates match, exceed, gap, and not_assessed
      Failure/Error: expect(react_comp['result']).to eq('exceed')
        expected: "exceed"
-            got: "gap"</code></pre>
-<p><strong>3. Revert & Green Proof:</strong> Reverted to <code>feature/monozukuri-portfolio-and-fitgap-revamp</code> and verified 35/35 specs passing green.</p>
+            got: "gap"
+     # ./spec/services/fit_gap/engine_spec.rb:71
+3 examples, 1 failure</code></pre>
+<p><strong>Step 3 (Revert &amp; Green Proof — commit <code>ea205b7</code>):</strong> Reverted via <code>git revert</code> on the same branch (history preserved) and verified all <strong>41/41 specs passing green</strong>.</p>
 
 <h3>7.3 AI Verification Moment Case Studies</h3>
 <ul>
@@ -608,7 +621,7 @@ Failures:
       <li>Override & Vacancy Event Cache Invalidation</li>
       <li>Strict Multi-Tenant Isolation (<code>TenantScoped</code>)</li>
       <li>Fail-Fast JWT Signing & Verification</li>
-      <li>Complete RSpec Harness (35 specs · 0 failures)</li>
+      <li>Complete RSpec Harness (41 specs · 0 failures)</li>
       <li>UU PDP Safe Logging & Data Minimization</li>
     </ul>
   </div>
@@ -657,6 +670,9 @@ Failures:
   <li><strong>Narrative Non-Determinism Across Reviewers:</strong> Because LLM generation is stochastic (<code>temperature: 0.4</code>), two hiring committee members viewing a dynamic report at different times would see slightly different executive narratives and lack a reproducible point-in-time <code>generated_at</code> audit record.</li>
 </ol>
 
+<h4>Honest Conclusion: The Dynamic Option Wins for the Deterministic Part</h4>
+<p>Evaluated fairly, the dynamic approach is the <strong>better</strong> design for the deterministic skill math. Deltas cost &lt;2ms, always reflect the latest overrides, and need no invalidation. Only the LLM narrative actually needs materializing. The natural next step is therefore a <strong>hybrid</strong>: compute deltas dynamically on read, and cache only the narrative keyed on a hash of its inputs (effective skill levels + vacancy rubric), so a narrative is regenerated only when its inputs really change. The frontend already computes deltas this way in memory (<code>usePortfolioQuery</code>). We shipped full materialization for this iteration because one immutable snapshot per <code>generated_at</code> gives a simpler audit trail for hiring decisions, and we would revisit that choice once write amplification (&sect;9.2) shows up in production metrics.</p>
+
 <hr>
 
 <h3>9.2 Review #2: Cost, Implementation Complexity & Operational Risk pada Opsi Terpilih (Materialized Option)</h3>
@@ -676,7 +692,7 @@ Failures:
   </li>
   <li><strong>Dual-Maintenance Synchronization Tax (Ruby vs. TypeScript):</strong>
     <ul>
-      <li>Because asynchronous Sidekiq regeneration takes 2s–15s, masking this eventual consistency window in the UI required implementing an optimistic in-memory delta calculator in <code>web/src/features/portfolio/usePortfolioQuery.ts</code>.</li>
+      <li>Because asynchronous Sidekiq regeneration takes 2s–15s, masking this eventual consistency window in the UI required implementing an optimistic in-memory delta calculator in <code>web/src/features/evaluation/hooks/usePortfolioQuery.ts</code>.</li>
       <li><strong>Engineering Tax:</strong> Core delta rules (<code>match</code>, <code>exceed</code>, <code>gap</code>, <code>not_assessed</code>) are maintained in <strong>two languages</strong> (Ruby <code>FitGap::Engine</code> and TypeScript <code>usePortfolioQuery</code>). Any future rubric rule change must be synchronized across both codebases and verified by both RSpec and Vitest suites to prevent UI-to-backend drift.</li>
     </ul>
   </li>
@@ -699,7 +715,7 @@ Failures:
   <strong>Reviewer Feedback:</strong> <em>"Implementasi signing JWT masih menggunakan secret yang di-hardcode ketika environment secret tidak tersedia. Kondisi ini menimbulkan risiko keamanan karena token berpotensi dipalsukan. Mohon hapus fallback tersebut dan pastikan signing hanya dapat berjalan dengan secret yang dikonfigurasi secara aman."</em>
 </div>
 
-<p><strong>Security Root Cause & Resolution:</strong> In an earlier commit, <code>JsonWebToken</code> fell back to a hardcoded string when <code>ENV['SECRET_KEY_BASE']</code> was unset. If a container booted with a missing or blank <code>SECRET_KEY_BASE</code>, an attacker could sign arbitrary payloads using the known fallback string and forge valid <code>HS256</code> tokens.</p>
+<p><strong>Security Root Cause &amp; Resolution:</strong> In commit <code>e5fe606</code>, while unblocking local setup, we changed <code>JsonWebToken</code> to fall back to <code>Rails.application.secret_key_base</code> and then a hardcoded string when <code>ENV['SECRET_KEY_BASE']</code> was unset (the baseline used <code>ENV.fetch</code> with no fallback, though it accepted a blank value). If a container booted with a missing or blank <code>SECRET_KEY_BASE</code>, an attacker could sign arbitrary payloads using the known fallback string and forge valid <code>HS256</code> tokens. The reviewer was right: a dev convenience in the signing path is a production vulnerability.</p>
 
 <p>We completely removed the hardcoded fallback in <code>api/app/lib/json_web_token.rb</code> and enforced a private <code>hmac_secret</code> validator that fails fast with <code>KeyError</code> if <code>SECRET_KEY_BASE</code> is missing or whitespace-only:</p>
 
@@ -769,7 +785,15 @@ end</code></pre>
   </li>
 </ol>
 
-<p><strong>Automated RSpec Verification:</strong> Verified in <code>spec/requests/portfolios_spec.rb</code>, <code>spec/requests/portfolio_skills_spec.rb</code>, and <code>spec/workers/fit_gap_generator_worker_spec.rb</code> that cross-tenant access attempts return <strong>HTTP 404 Not Found</strong> and background workers strictly isolate tenant context.</p>
+<p><strong>Automated RSpec Verification:</strong> Verified in <code>spec/requests/api/v1/portfolios_spec.rb</code>, <code>spec/requests/api/v1/portfolio_skills_spec.rb</code>, and <code>spec/workers/fit_gap_generator_worker_spec.rb</code> that cross-tenant access attempts return <strong>HTTP 404 Not Found</strong> and background workers strictly isolate tenant context.</p>
+
+<h4>Additional Finding From the Re-Audit: Login Could Mint Tokens for Another Tenant</h4>
+<p>While re-auditing every <code>unscoped</code> call and tenant entry point for this review, we found a more fundamental hole in the baseline <code>AuthenticationController</code>. The <code>scheme</code> claim (which <code>TenantResolverMiddleware</code> uses to set <code>Current.tenant_id</code>) was taken from the client-supplied <code>X-Tenant-Scheme</code> header, falling back to the first organization and then a hardcoded <code>'test-corp'</code>. Any admin could log in with <code>X-Tenant-Scheme: &lt;other-tenant&gt;</code> and receive a <strong>validly signed</strong> token for that tenant.</p>
+<ul>
+  <li><strong>Fix:</strong> Bound each user to one organization (<code>users.scheme</code>, reversible migration <code>20260815000002</code>, nullable with no default tenant). The token's tenant now comes <strong>only</strong> from the authenticated user's membership via exact <code>Organization.find_by(scheme:)</code>. Client params and headers are ignored, and login fails closed (<strong>HTTP 403</strong>) if the user has no valid organization.</li>
+  <li><strong>Proof (<code>spec/requests/api/v1/authentication_spec.rb</code> — 6 specs):</strong> Verifies that the token carries the user's own tenant, spoofed <code>scheme</code> params and <code>X-Tenant-Scheme</code> headers are ignored, users with nil or unknown schemes receive HTTP 403, and invalid credentials receive HTTP 401.</li>
+  <li><strong>Known Residual Risk (Documented):</strong> Baseline <code>TenantScoped</code> fails open when no tenant is set in <code>RequestStore</code>. Contained today via <code>require_tenant!</code> on HTTP endpoints and <code>Current.using</code> in workers; a stricter follow-up would raise when queried without a tenant outside an explicit bypass block.</li>
+</ul>
 
 <hr>
 
@@ -788,7 +812,7 @@ end</code></pre>
 <p>This submission bridges the gap between raw AI transcripts and actionable, trustworthy hiring decisions, fulfilling every requirement of <code>brief-fullstack.pdf</code> (Step 6: Final Submission) and resolving all four technical reviewer revisions.</p>
 
 <div class="callout callout-success">
-  <strong>&check; Final Submission & Reviewer Audit Complete:</strong> 35 backend RSpec specs passing, 27 frontend Vitest tests passing across 9 suites, 6 Playwright browser flows passing, 0 TypeScript errors, seeded fault proven and reverted, AI verification moments documented, all 6 Monozukuri interaction states implemented, and all 4 technical reviewer revisions resolved and verified.
+  <strong>&check; Final Submission &amp; Reviewer Audit Complete:</strong> 41 backend RSpec specs passing, 27 frontend Vitest tests passing across 9 suites, 6 Playwright browser flows passing, 0 TypeScript errors, CI workflow active, seeded fault proven and reverted on branch <code>fault/seeded-delta-bug</code>, AI verification moments documented, all 6 Monozukuri interaction states implemented, and all 4 technical reviewer revisions resolved and verified.
 </div>
 
 </div>
