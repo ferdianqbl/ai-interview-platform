@@ -70,7 +70,7 @@ module FitGap
         end
 
         if candidate_level.present?
-          delta       = expected_level - candidate_level # SEEDED FAULT: inverted delta
+          delta       = candidate_level - expected_level
           result      = delta == 0 ? 'match' : (delta > 0 ? 'exceed' : 'gap')
           is_override = portfolio_skill[:overridden] || false
           confidence  = portfolio_skill[:confidence]
