@@ -1,8 +1,8 @@
 # Fullstack Product Engineer Case Study: Execution Report & Monozukuri Submission
 **Target Platform:** [AI Interview Platform (`api/` & `web/`)](https://github.com/ferdianqbl/ai-interview-platform)  
 **Candidate / Engineer:** Product Engineer  
-**Pull Request Link:** [https://github.com/rakamindev/ai-interview-platform/pull/46](https://github.com/rakamindev/ai-interview-platform/pull/46)  
-**Video Demonstration Walkthrough:** [https://www.awesomescreenshot.com/video/55666106?key=63cd1783c7a06deab95b8e4ba6ab0e96](https://www.awesomescreenshot.com/video/55666106?key=63cd1783c7a06deab95b8e4ba6ab0e96)  
+**Pull Request Link:** [https://github.com/rakamindev/ai-interview-platform/pull/152](https://github.com/rakamindev/ai-interview-platform/pull/152)  
+**Video Demonstration Walkthrough:** [https://drive.google.com/file/d/1hQM03O0VKbjRz3jmsYzrxuwTa7q60gPQ/view?usp=sharing](https://drive.google.com/file/d/1hQM03O0VKbjRz3jmsYzrxuwTa7q60gPQ/view?usp=sharing)  
 **Submission Date:** August 2026 *(Revised October 2026 with Section 9: Technical Reviewer Revision Responses)*  
 
 ---
@@ -390,7 +390,7 @@ This submission bridges the gap between raw AI transcripts and actionable, trust
 
 | Submission Requirement (`brief-fullstack.pdf` Step 6 & Reviewer Audit) | Status |
 |---|---|
-| **1. GitHub Pull Request Link** (`rakamindev/ai-interview-platform#46`) | ✅ **Verified** |
+| **1. GitHub Pull Request Link** (`rakamindev/ai-interview-platform#152`) | ✅ **Verified** |
 | **2a. Product Context Analysis** (5 Pillars, Users, Candidates & Indonesian UU PDP Compliance) | ✅ **Verified** |
 | **2b. Severity-Ranked Problem & Gap Analysis** (P0–P3 Matrix, Missing Spec vs. Defective Impl, Constraint Signals) | ✅ **Verified** |
 | **2c. Option Evaluation & Trade-Off Matrix** (Option A vs. Option B across Impact, Cost, Maintainability, Failure Modes, Fit) | ✅ **Verified** |
@@ -398,7 +398,7 @@ This submission bridges the gap between raw AI transcripts and actionable, trust
 | **2e. Test Coverage, Seeded Fault Proof & AI Verification** (41 RSpec, 28 Vitest, 6 Playwright, CI, `fault/seeded-delta-bug`) | ✅ **Verified** |
 | **2f. Claimed Engineering Depth** (Balanced 50% Backend / 50% Frontend Fullstack Slice) | ✅ **Verified** |
 | **3. Visual Screenshots** (5 High-Fidelity Embedded UI Captures) | ✅ **Verified** |
-| **4. Video Demonstration Link** (AwesomeScreenshot End-to-End Walkthrough) | ✅ **Verified** |
+| **4. Video Demonstration Link** (Google Drive End-to-End Walkthrough) | ✅ **Verified** |
 | **Review #1: Dynamic Option Evaluation** (Evaluated under clean, modular `FitGap::Engine` service assumption) | ✅ **Verified** |
 | **Review #2: Materialized Option Cost & Risk** (Multi-entity invalidation, dual-maintenance tax, Redis/Sidekiq/DB costs) | ✅ **Verified** |
 | **Review #3: Fallback Secret JWT Removed** (`ENV.fetch('SECRET_KEY_BASE')` fail-fast `KeyError` + 3 RSpec specs) | ✅ **Verified** |

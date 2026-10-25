@@ -2,8 +2,8 @@
 ## Fullstack Product Engineer Case Study: AI Interview Platform
 
 **Platform:** AI Interview Platform  
-**Live Video Walkthrough:** [https://www.awesomescreenshot.com/video/55666106?key=63cd1783c7a06deab95b8e4ba6ab0e96](https://www.awesomescreenshot.com/video/55666106?key=63cd1783c7a06deab95b8e4ba6ab0e96)  
-**Pull Request Link:** [https://github.com/rakamindev/ai-interview-platform/pull/46](https://github.com/rakamindev/ai-interview-platform/pull/46)  
+**Live Video Walkthrough:** [https://drive.google.com/file/d/1hQM03O0VKbjRz3jmsYzrxuwTa7q60gPQ/view?usp=sharing](https://drive.google.com/file/d/1hQM03O0VKbjRz3jmsYzrxuwTa7q60gPQ/view?usp=sharing)  
+**Pull Request Link:** [https://github.com/rakamindev/ai-interview-platform/pull/152](https://github.com/rakamindev/ai-interview-platform/pull/152)  
 **Target Duration:** 3:30 – 4:30 minutes  
 **Format:** Screen Recording + Audio Demonstration  
 
