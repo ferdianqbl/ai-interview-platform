@@ -29,12 +29,20 @@ puts "== Seeding AI Interview development data =="
 #
 # id = 0 is reserved in rakamin-api as the "default" org — do not use it here.
 
-TEST_ORG = {
-  name:       "Test Corp",
-  scheme:     "test-corp",
-  identifier: "test-corp",
-  host:       "localhost"
-}.freeze
+TEST_ORGS = [
+  {
+    name:       "Test Corp",
+    scheme:     "test-corp",
+    identifier: "test-corp",
+    host:       "localhost"
+  },
+  {
+    name:       "Acme Corp",
+    scheme:     "acme-corp",
+    identifier: "acme-corp",
+    host:       "acme.localhost"
+  }
+].freeze
 
 ActiveRecord::Base.connection.execute(<<~SQL)
   CREATE TABLE IF NOT EXISTS public.organizations (
@@ -50,39 +58,49 @@ ActiveRecord::Base.connection.execute(<<~SQL)
   );
 SQL
 
-existing = ActiveRecord::Base.connection.select_one(
-  "SELECT id, name, scheme FROM public.organizations WHERE scheme = '#{TEST_ORG[:scheme]}' LIMIT 1"
-)
+TEST_ORGS.each do |org_data|
+  existing = ActiveRecord::Base.connection.select_one(
+    "SELECT id, name, scheme FROM public.organizations WHERE scheme = '#{org_data[:scheme]}' LIMIT 1"
+  )
 
-if existing
-  puts "  Organization already exists: id=#{existing['id']} scheme=#{existing['scheme']} (skipped)"
-else
-  result = ActiveRecord::Base.connection.select_one(<<~SQL)
-    INSERT INTO public.organizations
-      (name, scheme, identifier, host, alias_hosts, config, created_at, updated_at)
-    VALUES
-      (
-        '#{TEST_ORG[:name]}',
-        '#{TEST_ORG[:scheme]}',
-        '#{TEST_ORG[:identifier]}',
-        '#{TEST_ORG[:host]}',
-        '{}',
-        '{}',
-        NOW(),
-        NOW()
-      )
-    RETURNING id, name, scheme;
-  SQL
+  if existing
+    puts "  Organization already exists: id=#{existing['id']} scheme=#{existing['scheme']} (skipped)"
+  else
+    result = ActiveRecord::Base.connection.select_one(<<~SQL)
+      INSERT INTO public.organizations
+        (name, scheme, identifier, host, alias_hosts, config, created_at, updated_at)
+      VALUES
+        (
+          '#{org_data[:name]}',
+          '#{org_data[:scheme]}',
+          '#{org_data[:identifier]}',
+          '#{org_data[:host]}',
+          '{}',
+          '{}',
+          NOW(),
+          NOW()
+        )
+      RETURNING id, name, scheme;
+    SQL
 
-  puts "  Created organization: id=#{result['id']} scheme=#{result['scheme']}"
+    puts "  Created organization: id=#{result['id']} scheme=#{result['scheme']}"
+  end
 end
 
-# ── Admin User ───────────────────────────────────────────────────────────────
-admin = User.find_or_initialize_by(email: "admin@example.com")
-admin.password = "password123"
-admin.role = "admin"
-admin.save!
-puts "  Admin user ready: email=admin@example.com password=password123"
+# ── Admin Users for Both Tenants ─────────────────────────────────────────────
+admin1 = User.find_or_initialize_by(email: "admin@example.com")
+admin1.password = "password123"
+admin1.role = "admin"
+admin1.scheme = "test-corp" if admin1.respond_to?(:scheme=)
+admin1.save!
+puts "  [Tenant 1 - Test Corp] Admin ready: email=admin@example.com password=password123 (scheme=test-corp)"
+
+admin2 = User.find_or_initialize_by(email: "admin@acme.com")
+admin2.password = "password123"
+admin2.role = "admin"
+admin2.scheme = "acme-corp" if admin2.respond_to?(:scheme=)
+admin2.save!
+puts "  [Tenant 2 - Acme Corp] Admin ready: email=admin@acme.com password=password123 (scheme=acme-corp)"
 
 # ── B7 Skill Taxonomy (22 pilot skills) ──────────────────────────────────────
 
@@ -376,37 +394,56 @@ end
 puts "  Done — #{B7_SKILLS.size} skills seeded."
 puts ""
 
+# ── Sample Vacancies for Both Tenants ────────────────────────────────────────
+test_org_id = ActiveRecord::Base.connection.select_value("SELECT id FROM public.organizations WHERE scheme = 'test-corp'")
+acme_org_id = ActiveRecord::Base.connection.select_value("SELECT id FROM public.organizations WHERE scheme = 'acme-corp'")
+
+if test_org_id
+  Current.using(tenant_id: test_org_id) do
+    v1 = Vacancy.find_or_initialize_by(role_title: "Senior Frontend Engineer")
+    v1.created_by = admin1.id
+    v1.culture_dimensions = "Collaborative, detail-oriented, continuous learning"
+    v1.competency_expectations = "Expert React, TypeScript, and modern state architecture"
+    v1.save!
+
+    v1.vacancy_skills.destroy_all
+    v1.vacancy_skills.create!(skill_id: "SK-ENG-001", skill_label: "React / Frontend Development Core", expected_level: 4)
+    v1.vacancy_skills.create!(skill_id: "SK-ENG-002", skill_label: "Node.js / Backend Development", expected_level: 3)
+    puts "  [Tenant 1 - Test Corp] Vacancy ready: id=#{v1.id} '#{v1.role_title}'"
+  end
+end
+
+if acme_org_id
+  Current.using(tenant_id: acme_org_id) do
+    v2 = Vacancy.find_or_initialize_by(role_title: "Acme Lead Product Manager")
+    v2.created_by = admin2.id
+    v2.culture_dimensions = "Customer obsessed, high bias for action, data driven"
+    v2.competency_expectations = "Proven roadmapping, stakeholder influence, and product delivery"
+    v2.save!
+
+    v2.vacancy_skills.destroy_all
+    v2.vacancy_skills.create!(skill_id: "SK-PM-003", skill_label: "Data-Driven Decision Making", expected_level: 4)
+    v2.vacancy_skills.create!(skill_id: "SK-PM-004", skill_label: "Stakeholder Management", expected_level: 4)
+    puts "  [Tenant 2 - Acme Corp] Vacancy ready: id=#{v2.id} '#{v2.role_title}'"
+  end
+end
+
 # ── Print usage instructions ──────────────────────────────────────────────────
 
-org = ActiveRecord::Base.connection.select_one(
-  "SELECT id, scheme FROM public.organizations WHERE scheme = '#{TEST_ORG[:scheme]}' LIMIT 1"
-)
-
 puts ""
-puts "== Done! =="
+puts "== Done! Multi-Tenancy Accounts Ready =="
 puts ""
-puts "Your test organization:"
-puts "  id     : #{org['id']}"
-puts "  scheme : #{org['scheme']}"
+puts "Account 1 (Tenant: Test Corp):"
+puts "  Email    : admin@example.com"
+puts "  Password : password123"
+puts "  Scheme   : test-corp (tenant_id: #{test_org_id})"
 puts ""
-puts "To mint a JWT for testing, open the Rails console:"
+puts "Account 2 (Tenant: Acme Corp):"
+puts "  Email    : admin@acme.com"
+puts "  Password : password123"
+puts "  Scheme   : acme-corp (tenant_id: #{acme_org_id})"
 puts ""
-puts "  bundle exec rails console"
-puts ""
-puts "Then run:"
-puts ""
-puts "  # Assessor / admin token (can create assessments, view sessions, etc.)"
-puts "  token = JsonWebToken.encode({ user_id: 1, role: 'admin', scheme: '#{TEST_ORG[:scheme]}' })"
-puts "  puts token"
-puts ""
-puts "  # Candidate token (used in WebSocket ?token= param)"
-puts "  token = JsonWebToken.encode({ user_id: 2, role: 'student', scheme: '#{TEST_ORG[:scheme]}' })"
-puts "  puts token"
-puts ""
-puts "Then hit the API:"
-puts ""
-puts "  curl -s http://localhost:3001/api/v1/health"
-puts ""
-puts "  curl -s -H 'Authorization: Bearer <your_token>' \\"
-puts "       http://localhost:3001/api/v1/assessments"
+puts "To test multi-tenancy:"
+puts "1. Log in via UI (http://localhost:5173/login) with admin@example.com -> you see Test Corp vacancies only"
+puts "2. Log out, then log in with admin@acme.com -> you see Acme Corp vacancies only"
 puts ""
